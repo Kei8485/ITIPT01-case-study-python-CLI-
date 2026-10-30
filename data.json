@@ -1,0 +1,163 @@
+{
+  "settings": {
+    "studio_hourly_rate": 500.0
+  },
+  "studio_rentals": [
+    {
+      "id": 1,
+      "client_name": "Juan Dela Cruz",
+      "contact_number": "09171234567",
+      "date_issued": "2026-10-25",
+      "date": "2026-10-28",
+      "start_time": "14:00",
+      "hours": 2,
+      "total_fee": 1000.0,
+      "status": "Paid"
+    },
+    {
+      "id": 2,
+      "client_name": "Ana Villanueva",
+      "contact_number": "09459998888",
+      "date_issued": "2026-10-29",
+      "date": "2026-10-31",
+      "start_time": "15:00",
+      "hours": 4,
+      "total_fee": 2000.0,
+      "status": "Paid"
+    },
+    {
+      "id": 3,
+      "client_name": "Ynand",
+      "contact_number": "09656628720",
+      "date_issued": "2026-10-30",
+      "date": "2006-06-25",
+      "start_time": "14:00",
+      "hours": 5,
+      "total_fee": 2500.0,
+      "status": "Paid"
+    },
+    {
+      "id": 4,
+      "client_name": "Ynand",
+      "contact_number": "09656628720",
+      "date_issued": "2026-10-30",
+      "date": "2006-06-25",
+      "start_time": "14:00",
+      "hours": 5,
+      "total_fee": 2500.0,
+      "status": "Paid"
+    }
+  ],
+  "transactions": [
+    {
+      "id": 1,
+      "service_category": "Studio Rental",
+      "reference_id": 1,
+      "client_name": "Juan Dela Cruz",
+      "date": "2026-10-28",
+      "payment_method": "Cash",
+      "amount_paid": 1000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 2,
+      "service_category": "Studio Rental",
+      "reference_id": 2,
+      "client_name": "Ana Villanueva",
+      "date": "2026-10-30",
+      "payment_method": "Cash",
+      "amount_paid": 2000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 3,
+      "service_category": "Studio Rental",
+      "reference_id": 2,
+      "client_name": "Ana Villanueva",
+      "date": "2026-10-30",
+      "payment_method": "Cash",
+      "amount_paid": 2000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 4,
+      "service_category": "Studio Rental",
+      "reference_id": 2,
+      "client_name": "Ana Villanueva",
+      "date": "2026-10-30",
+      "payment_method": "Cash",
+      "amount_paid": 2000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 5,
+      "service_category": "Studio Rental",
+      "reference_id": 2,
+      "client_name": "Ana Villanueva",
+      "date": "2026-10-30",
+      "payment_method": "Cash",
+      "amount_paid": 2000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 6,
+      "service_category": "Studio Rental",
+      "reference_id": 2,
+      "client_name": "Ana Villanueva",
+      "date": "2026-10-30",
+      "payment_method": "Cash",
+      "amount_paid": 2000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 7,
+      "service_category": "Studio Rental",
+      "reference_id": 1,
+      "client_name": "Juan Dela Cruz",
+      "date": "2026-10-30",
+      "payment_method": "E-Wallet",
+      "amount_paid": 1000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 8,
+      "service_category": "Studio Rental",
+      "reference_id": 3,
+      "client_name": "Ynand",
+      "date": "2026-10-30",
+      "payment_method": "Cash",
+      "amount_paid": 2500.0,
+      "status": "Completed"
+    },
+    {
+      "id": 9,
+      "service_category": "Studio Rental",
+      "reference_id": 4,
+      "client_name": "Ynand",
+      "date": "2026-10-30",
+      "payment_method": "Cash",
+      "amount_paid": 2500.0,
+      "status": "Completed"
+    },
+    {
+      "id": 10,
+      "service_category": "Studio Rental",
+      "reference_id": 2,
+      "client_name": "Ana Villanueva",
+      "date": "2026-10-30",
+      "payment_method": "Cash",
+      "amount_paid": 2000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 11,
+      "service_category": "Studio Rental",
+      "reference_id": 3,
+      "client_name": "Ynand",
+      "date": "2026-10-30",
+      "payment_method": "Cash",
+      "amount_paid": 2500.0,
+      "status": "Completed"
+    }
+  ]
+}
