@@ -1,28 +1,10 @@
-import os
+import re
 import requests
-import re 
 from rich import print
 from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
-
-API_URL = "http://127.0.0.1:8000"
-
-def clear_screen():
-    os.system('cls')
-    
-
-def ask_input(label, pattern, error_msg): # component for labels
-    while True:
-        print()
-        value = Prompt.ask(f"[bold yellow]{label}[/bold yellow]").strip()
-        if value == "0":
-            clear_screen()
-            print("[cyan]Cancelled...[/cyan]\n")
-            return None # returns 2 times so it returns to the main menu
-        if re.match(pattern, value):
-            return value
-        print(f"[bold red]❌ {error_msg}[/bold red]")
+from utils import clear_screen, ask_input, api_get, API_URL, api_post, pauseDisplay
 
 #Main Menu
 def mainMenu():
@@ -48,20 +30,18 @@ def mainMenu():
 
 # View all studio bookings (GET /studio-rentals)
 def viewStudioRentals():
-    try:
-        response = requests.get(f"{API_URL}/studio-rentals")
-    except requests.exceptions.ConnectionError:
-        print("[bold red]Cannot connect to the API.[/bold red]")
-        Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
+    rentals = api_get("/studio-rentals") # uses the function from utils
+    # stores the json list 
+    
+    if rentals is None: 
+        return # if None that means server error
+    
+    if not rentals:
+        print("[yellow]No studio bookings found in the system yet![/yellow]")
+        pauseDisplay()
+        clear_screen()
         return
-
-    if response.status_code != 200:
-        print(f"[bold red]Error: HTTP {response.status_code}[/bold red]")
-        Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
-        return
-
-    rentals = response.json() # gets the response so that we know its for rental
-
+    
     table = Table(title="🎸 All Studio Bookings", border_style="cyan")
     table.add_column("ID", style="bold cyan", justify="center")
     table.add_column("Client Name", style="bold white")
@@ -96,12 +76,7 @@ def addStudioBooking():
     
     while True:
         # To check if it can connect to the server
-        try:
-            response = requests.get(f"{API_URL}/studio-rentals")
-        except requests.exceptions.ConnectionError:
-            print("[bold red]Cannot connect to the API.[/bold red]")
-            Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
-            return
+        api_get("/studio-rentals")
         
         print(Panel.fit(
             "[bold cyan]➕ ADD NEW STUDIO BOOKING[/bold cyan]\n"
@@ -133,29 +108,12 @@ def addStudioBooking():
             "hours": hours_input
         }
         
-        try: # the new_booking gets sent in the API
-            response = requests.post(f"{API_URL}/studio-rentals", json=new_booking)
-        except requests.exceptions.ConnectionError:
-            print("[bold red]Cannot connect to the API.[/bold red]")
-            Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
-            return
+        response = api_post("/studio-rentals",new_booking)
         
-        if response.status_code == 422:
-                clear_screen()
-                print("[bold red]❌ Invalid Input! Please check the following fields:[/bold red]")
-                for err in response.json()["detail"]:
-                    field_name = err["loc"][-1]
-                    print(f"   [yellow]• {field_name}[/yellow] has an invalid format or value.")
-                print("[dim]Please try again (or type 0 to cancel).\n[/dim]")
-                continue   # <-- Loops back to the top so the user can retry!
-        
-        if response.status_code != 201:
-            print(f"[bold red]Error: HTTP {response.status_code}[/bold red]")
-            return
-        
+        if response is None:
+            return    
+            
         # if its successful it will proceed here and it will return the r as the json file
-        r = response.json()
-        
         # we show that the data that was sent was a success
         table = Table(title="✅ New Studio Booking Added", border_style="green")
         table.add_column("ID", style="bold cyan", justify="center")
@@ -169,15 +127,15 @@ def addStudioBooking():
         table.add_column("Status", justify="center")
         
         table.add_row(
-            str(r["id"]), # turns into a string because its a int
-            r["client_name"], 
-            r["contact_number"],
-            r["date_issued"],
-            r["date"],
-            r["start_time"],
-            str(r["hours"]),
-            f"₱{r['total_fee']:,.2f}",
-            f"[yellow]{r['status']}[/yellow]"
+            str(response["id"]), # turns into a string because its a int
+            response["client_name"], 
+            response["contact_number"],
+            response["date_issued"],
+            response["date"],
+            response["start_time"],
+            str(response["hours"]),
+            f"₱{response['total_fee']:,.2f}",
+            f"[yellow]{response['status']}[/yellow]"
         )
         
         print(table)

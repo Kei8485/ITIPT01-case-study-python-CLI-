@@ -46,6 +46,17 @@
       "hours": 5,
       "total_fee": 2500.0,
       "status": "Paid"
+    },
+    {
+      "id": 5,
+      "client_name": "Nigga",
+      "contact_number": "09656628720",
+      "date_issued": "2026-10-31",
+      "date": "2003-05-20",
+      "start_time": "14:00",
+      "hours": 2,
+      "total_fee": 1000.0,
+      "status": "Booked"
     }
   ],
   "transactions": [
