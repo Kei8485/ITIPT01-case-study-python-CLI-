@@ -233,7 +233,7 @@ def finishStudioBooking():
                 f"[yellow]{r['status']}[/yellow]"
             )
         print(table)
-        print("[dim](<Type 0 at any time to cancel and go back>)[/dim]\n")
+        print("[red](<Type 0 at any time to cancel and go back>)\n")
         
         
         # Ask which Booking ID to finish (must be in booked_rentals!)
@@ -296,7 +296,198 @@ def finishStudioBooking():
             print(f"\n[bold red]Error: HTTP {patch_res.status_code}[/bold red]")
         Prompt.ask("\n[red] - - - Press Enter To Go Back - - - ").strip()
         clear_screen()
+        
+# Updating all details for Put API
+def udpateStudioBooking():
+    while True:
+        clear_screen()
+        # vvvvvvv SHOWING OF TABLES PALANG vvvvvvv #
+
+        # GET muna dito
+        try:
+            response = requests.get(f"{API_URL}/studio-rentals")
+        except requests.exceptions.ConnectionError:
+            print("[bold red]Cannot connect to the API.[/bold red]")
+            Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
+            return
+        if response.status_code != 200:
+            print(f"[bold red]Error: HTTP {response.status_code}[/bold red]")
+            Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
+            return
+        
+        # if all correct get the response
+        rentals = response.json()
+        
+        #showing booked rentals only and not yet paid
+        booked_rentals = [r for r in rentals if r ["status"] == "Booked"] # lalagay na dito ung data
+        # MAIN JOB ^^^^^^ for showing the filtered data
+        
+        # if empty
+        if not booked_rentals:
+            print("[yellow]No editable 'Booked' studio reservations found![/yellow]")
+            Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
+            clear_screen()
+            return
+        
+        ##display if all is valid
+        # Display table of editable bookings
+        table = Table(title="📝 Editable Studio Bookings (Status: Booked)", border_style="cyan")
+        table.add_column("ID", style="bold cyan", justify="center")
+        table.add_column("Client Name", style="bold white")
+        table.add_column("Contact")
+        table.add_column("Booking Date", style="yellow")
+        table.add_column("Start Time", style="yellow")
+        table.add_column("Hours", justify="center")
+        table.add_column("Total Fee", style="green", justify="right")
+        for r in booked_rentals:
+            table.add_row(
+                str(r["id"]),
+                r["client_name"],
+                r["contact_number"],
+                r["date"],
+                r["start_time"],
+                str(r["hours"]),
+                f"₱{r['total_fee']:,.2f}"
+            )
+        print(table)
+        print("[red](<Type 0 at any time to cancel and go back>)\n")        
+        # for displaying the input fields
+        valid_ids = [str(r["id"]) for r in booked_rentals]
+        #MAIN JOB ^^^ Since ung isa ay pang display, this ensure validation (gets the valid ids the user can only select)
+        #str(r["id"]) - to make sure id lng ang makukuha 
+        
+        while True: # need itong loop para icheck kung ung ID ay asa choices of data
+            rental_id = ask_input("Enter Booking ID to Update", r"^[1-9]\d*$", "ID must be a valid number!")
+            if not rental_id: return 
+            if rental_id in valid_ids:
+                break
+            print(f"[bold red]❌ Booking ID #{rental_id} is not in the list above! Choose from: {', '.join(valid_ids)}[/bold red]")
+            
+        # ^^^^^^^ SHOWING OF TABLES PALANG ^^^^^^^ #
+            
+            
+        # vvvvvvv SHOWING SELECTED ITEM TO EDIT vvvvvvv #    
+        #  Grab the current booking object so we know its existing details
+        selected_booking = next(r for r in booked_rentals if str(r["id"]) == rental_id)
+        # Shows the current item that is being edited
+        clear_screen()
+        print(Panel.fit(
+            f"[bold cyan]✏️ EDITING BOOKING #{rental_id}[/bold cyan]\n"
+            "[dim]Review current values below. Shortcuts:[/dim]\n"
+            "[bold green][000][/bold green] Retain / Keep current value\n"
+            "[bold yellow][00][/bold yellow]  Go back to previous field\n"
+            "[bold red][0][/bold red]   Cancel and return to menu",
+            border_style="cyan"
+        ))
+        
+        # Ask the information that will be updated
+                # Print the current details table
+        curr_table = Table(title=f"📋 Current Details for Booking #{rental_id}", border_style="yellow")
+        curr_table.add_column("Field", style="bold white")
+        curr_table.add_column("Current Value", style="bold green")
+
+        curr_table.add_row("Client / Band Name", selected_booking["client_name"])
+        curr_table.add_row("Contact Number", selected_booking["contact_number"])
+        curr_table.add_row("Reservation Date", selected_booking["date"])
+        curr_table.add_row("Start Time", selected_booking["start_time"])
+        curr_table.add_row("Number of Hours", str(selected_booking["hours"]))
+        print(curr_table)
+
+        # 2. Define the fields in order with their validation patterns
+        fields = [
+            {"key": "client_name", "label": "Client / Band Name", "pattern": r"^.+$", "err": "Name cannot be empty!"},
+            {"key": "contact_number", "label": "Contact Number (09XXXXXXXXX)", "pattern": r"^09\d{9}$", "err": "Must be 11 digits starting with 09!"},
+            {"key": "date", "label": "Reservation Date (YYYY-MM-DD)", "pattern": r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$", "err": "Invalid date! Use YYYY-MM-DD!"},
+            {"key": "start_time", "label": "Start Time (HH:MM)", "pattern": r"^([01]\d|2[0-3]):[0-5]\d$", "err": "Use 24-hour HH:MM format (e.g. 14:00)!"},
+            {"key": "hours", "label": "Number of Hours", "pattern": r"^[1-9]\d*$", "err": "Hours must be a whole number greater than 0!"}
+        ]
+
+        # 3. Start with the existing values as default
+        updated_information = {
+            "client_name": selected_booking["client_name"],
+            "contact_number": selected_booking["contact_number"],
+            "date": selected_booking["date"],
+            "start_time": selected_booking["start_time"],
+            "hours": selected_booking["hours"]
+        }
+
+        # 4. Step-by-step navigation loop
+        step = 0 # since naka list ung fields - naka base ung step ung key kung saang input na sya
+        while step < len(fields): # condition if step is greater than the length stops the program
+            current_field = fields[step] # current field na nakalagay kung pang ilan sa (array)
+            field_key = current_field["key"] # since na access na ung id ng array kukunin nya kung anong key un (if client name or contact number etc)
+            current_val = updated_information[field_key] # kung anong information ung inuupdate mo
+
+            print(f"\n[dim cyan]Editing Field [{step + 1}/{len(fields)}]:[/dim cyan] [bold yellow]{current_field['label']}[/bold yellow]")
+            print(f"[dim]Current value:[/dim] [bold green]{current_val}[/bold green]")
+            user_val = Prompt.ask(f"[bold yellow]Enter new value (000=keep, 00=back, 0=cancel)[/bold yellow]").strip()
+
+            # [0] Cancel completely
+            if user_val == "0":
+                clear_screen()
+                print("[cyan]Update cancelled...[/cyan]\n")
+                return
+
+            # [00] Go back to the previous field
+            if user_val == "00":
+                if step > 0:
+                    step -= 1
+                    print("[yellow]↩️ Going back to previous field...[/yellow]")
+                else:
+                    print("[bold red]⚠️ Already at the first field![/bold red]")
+                continue
+
+            # [000] Retain / Keep current value
+            if user_val == "000":
+                print(f"[dim green]Keeping current value: {current_val}[/dim green]")
+                step += 1
+                continue
+
+            # Regular input: Validate using Regex
+            if re.match(current_field["pattern"], user_val):
+                if field_key == "hours":
+                    updated_information[field_key] = int(user_val)
+                else:
+                    updated_information[field_key] = user_val
+                step += 1
+            else:
+                print(f"[bold red]❌ {current_field['err']}[/bold red]")
+        
+        # doing the PUT API Request
+        try: 
+            put_res = requests.put(f"{API_URL}/studio-rentals/{rental_id}", json=updated_information)
+        except requests.exceptions.ConnectionError:
+            print("[bold red]Cannot connect to the API.[/bold red]")
+            return
+        if put_res.status_code == 200:
+            ##creates a table showing that its been added
+            updated = put_res.json() # since the json=updated_information is not completed
+                                     # when we put updated_information, it inside the data now so this completes the json with the non inputed datas
+            print(f"\n[bold green]✅ Booking #{rental_id} successfully updated![/bold green]\n")
+            success_table = Table(title="✅ Updated Booking Details", border_style="green")
+            success_table.add_column("ID", style="bold cyan", justify="center")
+            success_table.add_column("Client Name", style="bold white")
+            success_table.add_column("Contact")
+            success_table.add_column("Booking Date", style="yellow")
+            success_table.add_column("Start Time", style="yellow")
+            success_table.add_column("Hours", justify="center")
+            success_table.add_column("Total Fee", style="green", justify="right")
+            success_table.add_row(
+                str(updated["id"]),
+                updated["client_name"],
+                updated["contact_number"],
+                updated["date"],
+                updated["start_time"],
+                str(updated["hours"]),
+                f"₱{updated['total_fee']:,.2f}"
+            )
+            print(success_table)
     
+        else:
+            print(f"\n[bold red]Error: HTTP {put_res.status_code} - {put_res.text}[/bold red]")
+            
+        Prompt.ask("\n[red] - - - Press Enter To Continue - - - ").strip()
+        return
     
    
 #Studio Rental
@@ -338,6 +529,7 @@ def studioRental():
                 # update studio bookings
                 clear_screen()
                 print("[cyan]Updating booking details...[/cyan]\n")
+                udpateStudioBooking()
             case "5":
                 # delete studio bookings
                 clear_screen()

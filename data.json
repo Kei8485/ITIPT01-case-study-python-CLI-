@@ -8,11 +8,11 @@
       "client_name": "Juan Dela Cruz",
       "contact_number": "09171234567",
       "date_issued": "2026-10-25",
-      "date": "2026-10-28",
-      "start_time": "14:00",
-      "hours": 2,
-      "total_fee": 1000.0,
-      "status": "Paid"
+      "date": "2026-11-03",
+      "start_time": "05:00",
+      "hours": 1,
+      "total_fee": 500.0,
+      "status": "Booked"
     },
     {
       "id": 2,

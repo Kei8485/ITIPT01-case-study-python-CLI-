@@ -15,6 +15,8 @@ def save_data(data):
         json.dump(data, file, indent=2)
 
 
+# - - - - - - - - - - - - - - Studio Rental API - - - - - - - - - - - - - -  #         
+
 # --- 1. READ: Get all Studio Bookings (GET) ---
 @app.get("/studio-rentals", status_code=200)
 def get_studio_rentals():
@@ -87,3 +89,34 @@ def pay_studio_rental(rental_id: int, payment: ConfirmPaymentInput):
             save_data(data)
             return r
     raise HTTPException(status_code=404, detail="Booking ID not found")
+
+
+# --- 4. UPDATE: Modify an existing Studio Booking (PUT) ---
+@app.put("/studio-rentals/{rental_id}", status_code=200)
+def update_studio_rental(rental_id: int, updated_data: StudioRentalInput): # flow: kukunin ung rental id and ung updated data json from main.py
+    data = load_data()
+    rentals = data["studio_rentals"]
+    hourly_rate = data["settings"]["studio_hourly_rate"]
+    
+    # looping to check if the data is already paid
+    for r in rentals:
+        if r["id"] == rental_id:
+            # Preventing paid transactions to be edited
+            if r["status"] == "Paid":
+                raise HTTPException(status_code=400, detail="Cannot update a booking that is already Paid")
+            
+            # if hindi naman paid proceed lng
+            r["client_name"] = updated_data.client_name
+            r["contact_number"] = updated_data.contact_number
+            r["date"] = updated_data.date
+            r["start_time"] = updated_data.start_time
+            r["hours"] = updated_data.hours
+            r["total_fee"] = hourly_rate * updated_data.hours
+            
+            save_data(data)
+            return r # return r para makita sa postman na working (didisplay ung piniling id na updated)
+        
+    raise HTTPException(status_code=404, detail="Booking ID not FOUND") # didisplay sa postman
+            
+            
+# - - - - - - - - - - - - - - Studio Rental API - - - - - - - - - - - - - -  #         
