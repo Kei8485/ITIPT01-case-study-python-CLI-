@@ -1,6 +1,6 @@
 import json
 from fastapi import FastAPI, HTTPException
-from models import StudioRentalInput, ConfirmPaymentInput # ung asa models ko
+from models import StudioRentalInput, LuthieryInput, LuthieryStatusInput, ConfirmPaymentInput # ung asa models ko
 from datetime import date
 
 app = FastAPI(title="LA School of Rock - Management API")
@@ -156,13 +156,140 @@ def delete_studio_rental(rental_id: int): # rental id ng nilagay ng user
 
 
 
+# - - - - - - - - - - - - - - Luthiery Services API - - - - - - - - - - - - - -  #
+
+# --- 1. (GET) Get all Luthiery Repair Jobs ---
+@app.get("/luthiery", status_code=200)
+def get_luthiery_services():
+    data = load_data()
+    return data.get("luthiery_services", []) # kinukuha ung lahat ng repair jobs sa data.json
+
+
+# --- 2. (POST) Add New Luthiery Repair Job ---
+@app.post("/luthiery", status_code=201)
+def create_luthiery_service(job: LuthieryInput): # base sa LuthieryInput model sa models.py
+    data = load_data()
+    if "luthiery_services" not in data:
+        data["luthiery_services"] = []
+    repairs = data["luthiery_services"]
+
+    # Auto-increment ID
+    new_id = get_next_id(repairs)
+
+    new_job = {
+        "id": new_id,
+        "client_name": job.client_name,
+        "contact_number": job.contact_number,
+        "date_issued": str(date.today()),
+        "instrument_type": job.instrument_type,
+        "issue_description": job.issue_description,
+        "estimated_cost": job.estimated_cost,
+        "status": "Pending" # default status pag bagong tanggap ung gitara
+    }
+
+    repairs.append(new_job)
+    save_data(data)
+    return new_job
+
+
+# --- 3a. (PATCH) Update Repair Status (Pending <-> In Progress) ---
+@app.patch("/luthiery/{job_id}/status", status_code=200)
+def update_luthiery_status(job_id: int, status_input: LuthieryStatusInput):
+    data = load_data()
+    repairs = data.get("luthiery_services", [])
+
+    for j in repairs:
+        if j["id"] == job_id:
+            if j["status"] == "Completed":
+                raise HTTPException(status_code=400, detail="Repair job is already Completed and Paid")
+
+            # pinapalitan ung status (halimbawa: Pending -> In Progress)
+            j["status"] = status_input.status
+            save_data(data)
+            return j
+
+    raise HTTPException(status_code=404, detail="Repair Job ID not found")
+
+
+# --- 3b. (PATCH) Complete Repair & Confirm Payment ---
+@app.patch("/luthiery/{job_id}/pay", status_code=200)
+def pay_luthiery_service(job_id: int, payment: ConfirmPaymentInput):
+    data = load_data()
+    repairs = data.get("luthiery_services", [])
+
+    # hinahanap ung repair job gamit ung ID
+    for j in repairs:
+        if j["id"] == job_id:
+            if j["status"] == "Completed":
+                raise HTTPException(status_code=400, detail="Repair job is already Completed and Paid")
+
+            # gagawing Completed ung status at gagawa ng transaction record
+            j["status"] = "Completed"
+            record_transaction(data, "Luthiery Service", j["id"], j["client_name"], j["estimated_cost"], payment.payment_method)
+
+            save_data(data)
+            return j
+
+    raise HTTPException(status_code=404, detail="Repair Job ID not found")
+
+
+# --- 4. (PUT) Update Luthiery Repair Job Details ---
+@app.put("/luthiery/{job_id}", status_code=200)
+def update_luthiery_service(job_id: int, updated_data: LuthieryInput): # kukunin ung job_id at ung bagong details galing sa main.py
+    data = load_data()
+    repairs = data.get("luthiery_services", [])
+
+    for j in repairs:
+        if j["id"] == job_id:
+            # bawal na i-edit pag Completed / bayad na
+            if j["status"] == "Completed":
+                raise HTTPException(status_code=400, detail="Cannot update a repair job that is already Completed")
+
+            j["client_name"] = updated_data.client_name
+            j["contact_number"] = updated_data.contact_number
+            j["instrument_type"] = updated_data.instrument_type
+            j["issue_description"] = updated_data.issue_description
+            j["estimated_cost"] = updated_data.estimated_cost
+
+            save_data(data)
+            return j
+
+    raise HTTPException(status_code=404, detail="Repair Job ID not found")
+
+
+# --- 5. (DELETE) Delete / Cancel Luthiery Repair Job ---
+@app.delete("/luthiery/{job_id}", status_code=200)
+def delete_luthiery_service(job_id: int):
+    data = load_data()
+    repairs = data.get("luthiery_services", [])
+
+    for j in repairs:
+        if j["id"] == job_id:
+            # bawal burahin pag Completed / bayad na
+            if j["status"] == "Completed":
+                raise HTTPException(status_code=400, detail="Cannot delete a repair job that is already Completed")
+
+            repairs.remove(j)
+            save_data(data)
+            return j
+
+    raise HTTPException(status_code=404, detail="Repair Job ID not found")
+
+
+
 # - - - - - - - - - - - - - - Transactions API - - - - - - - - - - - - - -  #
 
-# --- 1. (GET) Get all Transactions ---
+# --- 1. (GET) Get all Transactions (with optional ?payment_method= filter) ---
 @app.get("/transactions", status_code=200)
-def get_transactions():
+def get_transactions(payment_method: str | None = None):
     data = load_data()
-    return data["transactions"] # kinukuha ung lahat ng payment records sa data.json
+    transactions = data["transactions"] # kinukuha ung lahat ng payment records sa data.json
+
+    # if may piniling filter (Cash or E-Wallet), sasalain lang ung nagtutugma
+    if payment_method:
+        return [t for t in transactions if t["payment_method"].lower() == payment_method.lower()]
+
+    return transactions
 
 
 # --- 2. (PATCH) Update Payment Method of a Transaction ---

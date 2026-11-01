@@ -20,6 +20,14 @@ STUDIO_QUESTIONS = [
     {"key": "hours", "label": "Number of Hours", "pattern": r"^[1-9]\d*$", "err": "Must be > 0!", "is_int": True}
 ]
 
+LUTHIERY_QUESTIONS = [
+    {"key": "client_name", "label": "Client Name", "pattern": r"^.+$", "err": "Cannot be empty!"},
+    {"key": "contact_number", "label": "Contact Number (09XXXXXXXXX)", "pattern": r"^09\d{9}$", "err": "Must be 11 digits starting with 09!"},
+    {"key": "instrument_type", "label": "Instrument Type (e.g. Electric Guitar, Bass)", "pattern": r"^.+$", "err": "Cannot be empty!"},
+    {"key": "issue_description", "label": "Repair / Modification Issue", "pattern": r"^.+$", "err": "Cannot be empty!"},
+    {"key": "estimated_cost", "label": "Estimated Service Cost (PHP)", "pattern": r"^[1-9]\d*(\.\d{1,2})?$", "err": "Must be a valid amount > 0!", "is_float": True}
+]
+
 # - - - - - - - - - Questions - - - - - - - - -
 
 
@@ -39,9 +47,10 @@ STUDIO_COLUMNS = [
 LUTHIERY_COLUMNS = [
     {"header": "ID", "key": "id", "style": "bold cyan", "justify": "center"},
     {"header": "Client Name", "key": "client_name", "style": "bold white"},
+    {"header": "Contact", "key": "contact_number"},
     {"header": "Instrument", "key": "instrument_type", "style": "yellow"},
-    {"header": "Issue", "key": "issue_description"},
-    {"header": "Cost", "key": "estimated_cost", "style": "green", "is_currency": True},
+    {"header": "Issue / Service", "key": "issue_description"},
+    {"header": "Cost", "key": "estimated_cost", "style": "green", "justify": "right", "is_currency": True},
     {"header": "Status", "key": "status", "justify": "center", "is_status": True}
 ]
 
@@ -141,7 +150,12 @@ def showTable(data, title, columns):
             # check if the key is is_status true
             # if it is, we put the label of the status with color
             elif col.get("is_status"):
-                color = "green" if val in ("Paid", "Completed") else "yellow"
+                if val in ("Paid", "Completed"):
+                    color = "green"
+                elif val == "In Progress":
+                    color = "cyan"
+                else:
+                    color = "yellow"
                 val = f"[{color}]{val}[/{color}]"
             else:
                 # turning it into a string to be dispayed
@@ -176,7 +190,12 @@ def collect_form_inputs(question): # collects the json data format of the questi
             return  # User typed 0 to cancel
         
         # Convert numbers if needed
-        form_data[f["key"]] = int(val) if f.get("is_int") else val
+        if f.get("is_int"):
+            form_data[f["key"]] = int(val)
+        elif f.get("is_float"):
+            form_data[f["key"]] = float(val)
+        else:
+            form_data[f["key"]] = val
         
     return form_data
 
@@ -236,8 +255,10 @@ def step_by_step_edit(fields, current_data=None): # (kung anong question ilalaga
 
         # Regular input: Validate using Regex
         if re.match(current_field["pattern"], user_val):
-            if field_key == "hours":
+            if current_field.get("is_int") or field_key == "hours":
                 updated_info[field_key] = int(user_val)
+            elif current_field.get("is_float"):
+                updated_info[field_key] = float(user_val)
             else:
                 updated_info[field_key] = user_val
             step += 1

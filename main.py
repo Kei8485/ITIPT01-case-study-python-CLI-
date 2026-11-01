@@ -20,12 +20,10 @@ def mainMenu():
     print("[bold yellow]Select a Module:[/bold yellow]")
     print("[bold green][1][/bold green] [dark_red]Studio Rentals (Band Rehearsals & Recording)[/dark_red]")
     print("[bold green][2][/bold green] [dark_red]Luthiery Services (Guitar Repairs & Mods)[/dark_red]")
-    print("[bold green][3][/bold green] [dark_red]Music School (Lessons & Schedules)[/dark_red]")
-    print("[bold green][4][/bold green] [dark_red]Transactions & Payment Records[/dark_red]")
-    print("[bold magenta][5][/bold magenta] Daily Cash Flow Report [dim](<Owner Only>)[/dim]")
+    print("[bold green][3][/bold green] [dark_red]Transactions & Payment Records[/dark_red]")
     print("[bold red][0][/bold red] Exit System\n")
     
-    choice = Prompt.ask("[dim red]Enter option [0-5][/dim red]").strip()
+    choice = Prompt.ask("[dim red]Enter option [0-3][/dim red]").strip()
     return choice
 
 # View all studio bookings (GET /studio-rentals)
@@ -325,26 +323,375 @@ def studioRental():
             case _:
                 clear_screen()
                 print("[bold red]Invalid option. Please choose between 0 and 5.[/bold red]\n")
-    
-# - - - - - - - - - Transactions & Payment Records Module - - - - - - - - -
 
-# View all transactions (GET /transactions)
-def viewTransactions():
-    transactions = api_get("/transactions") # kumukuha ng lahat ng transactions galing sa API
+
+# - - - - - - - - - Luthiery Services Module - - - - - - - - -
+
+# View all luthiery repair jobs (GET /luthiery)
+def viewLuthieryServices():
+    response = api_get("/luthiery") # kumukuha ng lahat ng repair jobs galing sa API
     
-    if transactions is None:
+    if response is None:
         return # if None that means server error
         
-    if not transactions: # pag walang laman ung transactions list
-        print("[yellow]No transaction records found in the system yet![/yellow]")
+    if not response: # pag alang laman ung luthiery_services list
+        print("[yellow]No luthiery repair jobs found in the system yet![/yellow]")
         pauseDisplay()
         clear_screen()
         return
         
-    # ipapakita ung table gamit ung TRANSACTION_COLUMNS blueprint
-    showTable(transactions, "💵 All Transaction & Payment Records", TRANSACTION_COLUMNS)
+    # ipapakita ung table gamit ung LUTHIERY_COLUMNS blueprint
+    showTable(response, "🔧 All Luthiery Repair & Modification Jobs", LUTHIERY_COLUMNS)
     pauseDisplay()
     clear_screen()
+
+
+# Add new Luthiery Repair Job (POST /luthiery)
+def addLuthieryJob():
+    while True:
+        # check muna kung connected sa server
+        get_response = api_get("/luthiery")
+        if get_response is None:
+            return
+            
+        showHeadingPanel("➕ ADD NEW REPAIR / MODIFICATION JOB", "000=keep current | 00=back | 0=cancel")
+        
+        new_job = step_by_step_edit(LUTHIERY_QUESTIONS) # tatanungin ung user base sa LUTHIERY_QUESTIONS
+        if not new_job:
+            return # cancel at babalik sa menu
+            
+        if not ask_confirm(f"Add new repair job for {new_job['client_name']} ({new_job['instrument_type']}) costing ₱{new_job['estimated_cost']:,.2f}?"):
+            clear_screen()
+            print("[cyan]Repair job creation cancelled...[/cyan]\n")
+            return
+            
+        response = api_post("/luthiery", new_job)
+        if response is None:
+            return
+            
+        # ipapakita ung bagong gawang repair job kasama ung auto-generated ID at status
+        showTable(response, "✅ New Luthiery Repair Job Added", LUTHIERY_COLUMNS)
+        pauseDisplay()
+        clear_screen()
+        return
+
+
+# Update Repair Progress (Pending <-> In Progress) OR Complete & Pay (PATCH)
+def finishLuthieryJob():
+    while True:
+        response = api_get("/luthiery")
+        if response is None:
+            return
+            
+        # kukunin lang ung mga ongoing repairs (Pending or In Progress) na hindi pa Completed
+        active_jobs = [j for j in response if j["status"] != "Completed"]
+        showHeadingPanel("🔧 UPDATE REPAIR STATUS / CONFIRM PAYMENT", "Select an ongoing repair job to update status or complete payment")
+        
+        if not active_jobs: # pag lahat ay Completed na o walang laman
+            print("[yellow]No ongoing ('Pending' or 'In Progress') repair jobs found![/yellow]")
+            pauseDisplay()
+            clear_screen()
+            return
+            
+        showTable(active_jobs, "🔧 Ongoing Luthiery Repair Jobs", LUTHIERY_COLUMNS)
+        
+        valid_ids = [str(j["id"]) for j in active_jobs]
+        
+        while True:
+            while True:
+                chosen_id = ask_input("Choose the Repair Job ID", r"^[1-9]\d*$", "ID must be a valid number!")
+                if not chosen_id: return
+                if chosen_id in valid_ids: # ichecheck kung nasa active list ung ID
+                    break
+                print(f"[bold red]❌ Repair Job ID #{chosen_id} is not in the ongoing list above! Choose from: {', '.join(valid_ids)}[/bold red]")
+                
+            target = next(j for j in active_jobs if str(j["id"]) == chosen_id)
+            print(f"\n[dim]Selected Job #{chosen_id}: {target['client_name']} ({target['instrument_type']}) — Current Status:[/dim] [bold yellow]{target['status']}[/bold yellow]")
+            
+            # Papipiliin kung gagawing In Progress/Pending o kung tapos na at magbabayad na (Completed)
+            toggle_status = "In Progress" if target["status"] == "Pending" else "Pending"
+            print("\n[bold yellow]Select Action:[/bold yellow]")
+            print(f"[bold green][1][/bold green] Change Status to '[bold cyan]{toggle_status}[/bold cyan]' (No payment yet)")
+            print("[bold green][2][/bold green] Mark as '[bold green]Completed[/bold green]' & Confirm Payment")
+            
+            action_choice = ask_input("Enter choice [1-2] (or 00 to go back)", r"^(1|2|00)$", "Please enter 1, 2, or 00 to go back!")
+            if action_choice is None: return
+            if action_choice == "00":
+                print("[yellow]↩️ Going back to choose Repair Job ID...[/yellow]\n")
+                continue
+                
+            # Option 1: Palitan lang ung status (Pending <-> In Progress)
+            if action_choice == "1":
+                if not ask_confirm(f"Update Job #{chosen_id} ({target['client_name']}) status from '{target['status']}' to '{toggle_status}'?"):
+                    clear_screen()
+                    print("[cyan]Status update cancelled...[/cyan]\n")
+                    return
+                    
+                updated_job = api_patch(f"/luthiery/{chosen_id}/status", {"status": toggle_status})
+                if updated_job is None:
+                    return
+                    
+                print(f"\n[bold green]✅ Repair Job #{chosen_id} status updated to {toggle_status}![/bold green]\n")
+                showTable(updated_job, "✅ Updated Repair Job", LUTHIERY_COLUMNS)
+                pauseDisplay()
+                clear_screen()
+                return
+                
+            # Option 2: Tapos na ung gawa at magbabayad na ung client (Completed + Transaction record)
+            print("\n[bold yellow]Select Payment Method:[/bold yellow]")
+            print("[bold green][1][/bold green] Cash")
+            print("[bold green][2][/bold green] E-Wallet")
+            
+            pay_choice = ask_input("Enter choice [1-2] (or 00 to go back)", r"^(1|2|00)$", "Please enter 1 for Cash, 2 for E-Wallet, or 00 to go back!")
+            if pay_choice is None: return
+            if pay_choice == "00":
+                print("[yellow]↩️ Going back to choose Repair Job ID...[/yellow]\n")
+                continue
+                
+            payment_method = "Cash" if pay_choice == "1" else "E-Wallet"
+            break
+            
+        if not ask_confirm(f"Confirm payment of ₱{target['estimated_cost']:,.2f} for {target['client_name']} ({target['instrument_type']}) via {payment_method}?"):
+            clear_screen()
+            print("[cyan]Payment cancelled...[/cyan]\n")
+            return
+            
+        updated_job = api_patch(f"/luthiery/{chosen_id}/pay", {"payment_method": payment_method})
+        if updated_job is None:
+            return
+            
+        print(f"\n[bold green]✅ Payment Confirmed! Repair Job #{updated_job['id']} ({updated_job['client_name']}) is now COMPLETED via {payment_method}![/bold green]")
+        print("[dim green]Transaction record has been automatically created and saved to data.json.\n[/dim green]")
+        
+        showTable(updated_job, "✅ Completed Repair Job", LUTHIERY_COLUMNS)
+        pauseDisplay()
+        clear_screen()
+        return
+
+
+# Update Luthiery Repair Job Details (PUT /luthiery/{job_id})
+def updateLuthieryJob():
+    while True:
+        response = api_get("/luthiery")
+        if response is None:
+            return
+            
+        # ipapakita lang ung mga hindi pa Completed (bawal na i-edit pag bayad/tapos na)
+        editable_jobs = [j for j in response if j["status"] != "Completed"]
+        
+        if not editable_jobs:
+            print("[yellow]No editable ('Pending' or 'In Progress') repair jobs found![/yellow]")
+            pauseDisplay()
+            clear_screen()
+            return
+            
+        showTable(editable_jobs, "📝 Editable Luthiery Repair Jobs", LUTHIERY_COLUMNS)
+        print("[red](<Type 0 at any time to cancel and go back>)\n")
+        
+        valid_ids = [str(j["id"]) for j in editable_jobs]
+        
+        while True:
+            job_id = ask_input("Enter Repair Job ID to Update", r"^[1-9]\d*$", "ID must be a valid number!")
+            if not job_id: return
+            if job_id in valid_ids:
+                break
+            print(f"[bold red]❌ Repair Job ID #{job_id} is not in the list above! Choose from: {', '.join(valid_ids)}[/bold red]")
+            
+        # kukunin ung napiling repair job para madisplay ung current details nya
+        selected_job = next(j for j in editable_jobs if str(j["id"]) == job_id)
+        
+        clear_screen()
+        showHeadingPanel(f"✏️ EDITING REPAIR JOB #{job_id}", "000=keep current | 00=back | 0=cancel")
+        showTable(selected_job, f"📋 Current Details for Repair Job #{job_id}", LUTHIERY_COLUMNS)
+        
+        updated_information = step_by_step_edit(LUTHIERY_QUESTIONS, selected_job)
+        if updated_information is None:
+            return
+            
+        if not ask_confirm(f"Save updated changes for Repair Job #{job_id}?"):
+            clear_screen()
+            print("[cyan]Update cancelled...[/cyan]\n")
+            return
+            
+        response = api_put(f"/luthiery/{job_id}", updated_information)
+        if response is None:
+            return
+            
+        showTable(response, f"✅ Repair Job #{job_id} successfully updated!", LUTHIERY_COLUMNS)
+        pauseDisplay()
+        return
+
+
+# Delete / Cancel a Luthiery Repair Job (DELETE /luthiery/{job_id})
+def deleteLuthieryJob():
+    while True:
+        response = api_get("/luthiery")
+        if response is None:
+            return
+            
+        # hindi pwedeng burahin pag Completed/bayad na
+        cancellable_jobs = [j for j in response if j["status"] != "Completed"]
+        showHeadingPanel("🗑️ CANCEL REPAIR JOB", "Select an ongoing repair job to cancel / delete")
+        
+        if not cancellable_jobs:
+            print("[yellow]No cancellable ('Pending' or 'In Progress') repair jobs found![/yellow]")
+            pauseDisplay()
+            clear_screen()
+            return
+            
+        showTable(cancellable_jobs, "🔧 Cancellable Luthiery Repair Jobs", LUTHIERY_COLUMNS)
+        
+        valid_ids = [str(j["id"]) for j in cancellable_jobs]
+        while True:
+            chosen_id = ask_input("Enter Repair Job ID to Cancel", r"^[1-9]\d*$", "ID must be a valid number!")
+            if not chosen_id: return
+            if chosen_id in valid_ids:
+                break
+            print(f"[bold red]❌ Repair Job ID #{chosen_id} is not in the list above! Choose from: {', '.join(valid_ids)}[/bold red]")
+            
+        selected_job = next(j for j in cancellable_jobs if str(j["id"]) == chosen_id)
+        
+        if not ask_confirm(f"Are you sure you want to permanently cancel Repair Job #{chosen_id} for {selected_job['client_name']} ({selected_job['instrument_type']})?"):
+            clear_screen()
+            print("[cyan]Deletion cancelled...[/cyan]\n")
+            return
+            
+        deleted = api_delete(f"/luthiery/{chosen_id}")
+        if deleted is None:
+            return
+            
+        print(f"\n[bold green]✅ Repair Job #{chosen_id} successfully cancelled and deleted![/bold green]\n")
+        showTable(deleted, "🗑️ Deleted Repair Job", LUTHIERY_COLUMNS)
+        
+        pauseDisplay()
+        clear_screen()
+        return
+
+
+# Luthiery Services Menu
+def luthieryModule():
+    clear_screen()
+    while True:
+        print(Panel.fit(
+            "[bold aquamarine1]🔧 LUTHIERY SERVICES MODULE[/bold aquamarine1]\n"
+            "[dim red]Guitar & Instrument Repairs and Modifications[/dim red]",
+            border_style="cyan"
+        ))
+
+        print("[bold yellow]Select an Action:[/bold yellow]")
+        print("[bold green][1][/bold green] [dark_red]View All Repair Jobs[/dark_red]")
+        print("[bold green][2][/bold green] [dark_red]Add New Repair Job[/dark_red]")
+        print("[bold green][3][/bold green] [dark_red]Update Repair Status / Confirm Payment[/dark_red]")
+        print("[bold green][4][/bold green] [dark_red]Update Repair Job Details[/dark_red]")
+        print("[bold green][5][/bold green] [dark_red]Delete / Cancel Repair Job[/dark_red]")
+        print("[bold red][0][/bold red] Back to Main Menu\n")
+
+        choice = Prompt.ask("[dim red]Enter option [0-5][/dim red]").strip()
+        match choice:
+            case "1":
+                clear_screen()
+                print("[cyan]Loading all repair jobs...[/cyan]\n")
+                viewLuthieryServices()
+            case "2":
+                clear_screen()
+                print("[cyan]Adding new repair job...[/cyan]\n")
+                addLuthieryJob()
+            case "3":
+                clear_screen()
+                print("[cyan]Updating repair status / confirming payment...[/cyan]\n")
+                finishLuthieryJob()
+            case "4":
+                clear_screen()
+                print("[cyan]Updating repair job details...[/cyan]\n")
+                updateLuthieryJob()
+            case "5":
+                clear_screen()
+                print("[cyan]Deleting repair job...[/cyan]\n")
+                deleteLuthieryJob()
+            case "0":
+                print("[yellow]Returning to Main Menu...[/yellow]\n")
+                break
+            case _:
+                clear_screen()
+                print("[bold red]Invalid option. Please choose between 0 and 5.[/bold red]\n")
+
+
+# - - - - - - - - - Transactions & Payment Records Module - - - - - - - - -
+
+# View transactions (with filter & total summary)
+def viewTransactions(filter_method=None):
+    # tatawag sa API, if may filter_method (Cash/E-Wallet), ipapasa as query parameter ?payment_method=...
+    url = f"/transactions?payment_method={filter_method}" if filter_method else "/transactions"
+    transactions = api_get(url)
+    
+    if transactions is None:
+        return # if None that means server error
+        
+    if not transactions: # pag walang nahanap na record
+        msg = f"[yellow]No {filter_method} transactions found![/yellow]" if filter_method else "[yellow]No transaction records found in the system yet![/yellow]"
+        print(msg)
+        pauseDisplay()
+        clear_screen()
+        return
+        
+    title = f"💵 {filter_method} Transactions" if filter_method else "💵 All Transaction & Payment Records"
+    
+    # ipapakita ung table gamit ung TRANSACTION_COLUMNS blueprint
+    showTable(transactions, title, TRANSACTION_COLUMNS)
+    
+    # Kukuwentahin ung total collection para sa listahan
+    total_amount = sum(t["amount_paid"] for t in transactions)
+    cash_total = sum(t["amount_paid"] for t in transactions if t["payment_method"].lower() == "cash")
+    ewallet_total = sum(t["amount_paid"] for t in transactions if t["payment_method"].lower() == "e-wallet")
+    
+    # Summary Panel
+    if filter_method:
+        summary_text = f"[bold white]Total {filter_method} Collected:[/bold white] [bold green]₱{total_amount:,.2f}[/bold green] ({len(transactions)} transaction/s)"
+    else:
+        summary_text = (
+            f"[bold magenta]Cash Total:[/bold magenta] [bold green]₱{cash_total:,.2f}[/bold green]   |   "
+            f"[bold cyan]E-Wallet Total:[/bold cyan] [bold green]₱{ewallet_total:,.2f}[/bold green]   |   "
+            f"[bold white]Grand Total:[/bold white] [bold yellow]₱{total_amount:,.2f}[/bold yellow] ({len(transactions)} total)"
+        )
+        
+    print(Panel(summary_text, title="[bold]Summary[/bold]", border_style="green", expand=False))
+    
+    pauseDisplay()
+    clear_screen()
+
+
+# Submenu para makapili kung All, Cash only, or E-Wallet only
+def viewTransactionsMenu():
+    while True:
+        clear_screen()
+        print(Panel.fit(
+            "[bold aquamarine1]🔍 VIEW & FILTER TRANSACTIONS[/bold aquamarine1]\n"
+            "[dim]Filter transactions by payment method and view total collection[/dim]",
+            border_style="cyan"
+        ))
+        print("[bold yellow]Select Filter:[/bold yellow]")
+        print("[bold green][1][/bold green] View All (With Cash & E-Wallet Breakdown)")
+        print("[bold green][2][/bold green] Cash Transactions Only")
+        print("[bold green][3][/bold green] E-Wallet Transactions Only")
+        print("[bold red][0][/bold red] Back\n")
+        
+        choice = Prompt.ask("[dim red]Enter option [0-3][/dim red]").strip()
+        match choice:
+            case "1":
+                clear_screen()
+                viewTransactions()
+            case "2":
+                clear_screen()
+                viewTransactions(filter_method="Cash")
+            case "3":
+                clear_screen()
+                viewTransactions(filter_method="E-Wallet")
+            case "0":
+                clear_screen()
+                break
+            case _:
+                clear_screen()
+                print("[bold red]Invalid option. Please choose between 0 and 3.[/bold red]\n")
 
 
 # Update payment method of a transaction (PATCH /transactions/{tx_id})
@@ -424,16 +771,14 @@ def transactionsModule():
         ))
 
         print("[bold yellow]Select an Action:[/bold yellow]")
-        print("[bold green][1][/bold green] [dark_red]View All Transactions[/dark_red]")
+        print("[bold green][1][/bold green] [dark_red]View & Filter Transactions (Cash / E-Wallet / Totals)[/dark_red]")
         print("[bold green][2][/bold green] [dark_red]Update Payment Method (Cash / E-Wallet)[/dark_red]")
         print("[bold red][0][/bold red] Back to Main Menu\n")
 
         choice = Prompt.ask("[dim red]Enter option [0-2][/dim red]").strip()
         match choice:
             case "1":
-                clear_screen()
-                print("[cyan]Loading all transactions...[/cyan]\n")
-                viewTransactions()
+                viewTransactionsMenu()
             case "2":
                 clear_screen()
                 print("[cyan]Updating transaction payment method...[/cyan]\n")
@@ -453,15 +798,11 @@ while True:
         case "1":
             studioRental()
         case "2":
-            print("[cyan]Adding new studio booking...[/cyan]\n")
+            luthieryModule()
         case "3":
-            print("[cyan]Finishing booking & confirming payment...[/cyan]\n")
-        case "4":
             transactionsModule()
-        case "5":
-            print("[cyan]Deleting studio booking...[/cyan]\n")
         case "0":
-            print("[yellow]Returning to Main Menu...[/yellow]\n")
+            print("[yellow]Exiting LA School of Rock System... Goodbye![/yellow]\n")
             break  
         case _:
-            print("[bold red]Invalid option. Please choose between 0 and 5.[/bold red]\n")
+            print("[bold red]Invalid option. Please choose between 0 and 3.[/bold red]\n")
