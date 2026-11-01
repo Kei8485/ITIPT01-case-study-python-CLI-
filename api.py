@@ -3,6 +3,9 @@ from fastapi import FastAPI, HTTPException
 from models import StudioRentalInput, LuthieryInput, LuthieryStatusInput, ConfirmPaymentInput # ung asa models ko
 from datetime import date
 
+
+# 13 API's 
+
 app = FastAPI(title="LA School of Rock - Management API")
 
 # --- Helper functions to read and save data.json ---
@@ -17,7 +20,8 @@ def save_data(data):
 def get_next_id(items):
     return max([item["id"] for item in items], default=0) + 1
 
-
+# Created this because 2 references will use this 
+# this only records the transanction. Pushes it to the transactions json file
 def record_transaction(data, category, ref_id, client_name, amount, payment_method):
     transactions = data["transactions"] # opens the json with the class transactions
     new_id = get_next_id(transactions)
@@ -231,17 +235,17 @@ def pay_luthiery_service(job_id: int, payment: ConfirmPaymentInput):
     repairs = data.get("luthiery_services", [])
 
     # hinahanap ung repair job gamit ung ID
-    for j in repairs:
-        if j["id"] == job_id:
-            if j["status"] == "Completed":
+    for r in repairs:
+        if r["id"] == job_id:
+            if r["status"] == "Completed":
                 raise HTTPException(status_code=400, detail="Repair job is already Completed and Paid")
 
             # gagawing Completed ung status at gagawa ng transaction record
-            j["status"] = "Completed"
-            record_transaction(data, "Luthiery Service", j["id"], j["client_name"], j["estimated_cost"], payment.payment_method)
+            r["status"] = "Completed"
+            record_transaction(data, "Luthiery Service", r["id"], r["client_name"], r["estimated_cost"], payment.payment_method)
 
             save_data(data)
-            return j
+            return r
 
     raise HTTPException(status_code=404, detail="Repair Job ID not found")
 
