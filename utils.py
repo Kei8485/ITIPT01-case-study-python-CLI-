@@ -45,6 +45,17 @@ LUTHIERY_COLUMNS = [
     {"header": "Status", "key": "status", "justify": "center", "is_status": True}
 ]
 
+TRANSACTION_COLUMNS = [
+    {"header": "TX ID", "key": "id", "style": "bold cyan", "justify": "center"},
+    {"header": "Category", "key": "service_category", "style": "yellow"},
+    {"header": "Ref ID", "key": "reference_id", "justify": "center"},
+    {"header": "Client Name", "key": "client_name", "style": "bold white"},
+    {"header": "Date", "key": "date", "style": "dim yellow"},
+    {"header": "Payment Method", "key": "payment_method", "style": "bold magenta", "justify": "center"},
+    {"header": "Amount Paid", "key": "amount_paid", "style": "green", "justify": "right", "is_currency": True},
+    {"header": "Status", "key": "status", "justify": "center", "is_status": True}
+]
+
 # - - - - - - - - - Table Columns - - - - - - - - -
 
 
@@ -54,6 +65,7 @@ def showCannotConnectAPIServer():
     
 def pauseDisplay():
     Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
+    clear_screen()
 
 def clear_screen():
     os.system('cls')
@@ -75,6 +87,22 @@ def showHeadingPanel(title, description):
         "[dim yellow]Press [0] to cancel or go back[/dim yellow]",
         border_style="cyan"
     ))
+    
+def ask_confirm(prompt_msg="Are you sure you want to proceed?"):
+    """
+    Asks the user for (y/n) confirmation.
+    Loops until the user enters 'y' or 'n'.
+    Returns True for 'y'/'yes', and False for 'n'/'no'.
+    """
+    while True:
+        choice = Prompt.ask(f"\n[bold yellow]{prompt_msg} (y/n)[/bold yellow]").strip().lower()
+        
+        if choice in ("y", "yes"):
+            return True
+        elif choice in ("n", "no"):
+            return False
+            
+        print("[bold red]❌ Invalid input! Please enter 'y' for Yes or 'n' for No.[/bold red]")
     
 #displaying table
 def showTable(data, title, columns):
@@ -151,6 +179,71 @@ def collect_form_inputs(question): # collects the json data format of the questi
         form_data[f["key"]] = int(val) if f.get("is_int") else val
         
     return form_data
+
+def step_by_step_edit(fields, current_data=None): # (kung anong question ilalagay)(kung anong data ilalagay) if alang data stays at None
+    
+    # Loops through fields with current values.
+    # Supports: 000 (keep), 00 (go back), 0 (cancel).
+    # Returns the updated dictionary, or None if cancelled.
+    
+    if current_data is None:
+        current_data = {}
+    
+    is_editing = bool(current_data)  # True if editing, False if adding brand-new
+    
+    updated_info = {}
+    for f in fields: # putting the info from the json file into the updated info
+        updated_info[f["key"]] = current_data.get(f["key"], "")
+    
+    step = 0 # since naka list ung fields - naka base ung step ung key kung saang input na sya
+    while step < len(fields): # condition if step is greater than the length stops the program
+        current_field = fields[step] # kung anong question ang nakalagay
+        # ex sa array 1 ay ung field ng client name question
+        field_key = current_field["key"] # kinuhana ung key, papakita na ung mismoong question
+        current_val = updated_info[field_key] # nilagay lng ung dating data na iuupdate ngayon
+        
+        action = "Editing" if is_editing else "Inputing"
+        print(f"\n[dim cyan]{action} Field [{step + 1}/{len(fields)}]:[/dim cyan] [bold yellow]{current_field['label']}[/bold yellow]")
+        # Only show current value & 000 shortcut if we are editing an existing item
+        if is_editing and current_val != "":
+            print(f"[pink]Current value: [bold green]{current_val}[/bold green]")
+            shortcuts = "000=keep, 00=back, 0=cancel"
+        else:
+            shortcuts = "00=back, 0=cancel"
+            
+        user_val = Prompt.ask(f"[bold yellow]Enter value ({shortcuts})[/bold yellow]").strip()
+
+        # [0] Cancel completely
+        if user_val == "0":
+            clear_screen()
+            print("[cyan]Update cancelled...[/cyan]\n")
+            return None
+
+        # [00] Go back to the previous field
+        if user_val == "00":
+            if step > 0:
+                step -= 1
+                print("[yellow]↩️ Going back to previous field...[/yellow]")
+            else:
+                print("[bold red]⚠️ Already at the first field![/bold red]")
+            continue
+
+        # [000] Retain / Keep current value
+        if is_editing and user_val == "000":
+            print(f"[dim green]Keeping current value: {current_val}[/dim green]")
+            step += 1
+            continue
+
+        # Regular input: Validate using Regex
+        if re.match(current_field["pattern"], user_val):
+            if field_key == "hours":
+                updated_info[field_key] = int(user_val)
+            else:
+                updated_info[field_key] = user_val
+            step += 1
+        else:
+            print(f"[bold red]❌ {current_field['err']}[/bold red]")
+    return updated_info
 # - - - - - - - - - helper functions - - - - - - - - -
 
 
@@ -192,4 +285,60 @@ def api_post(endpoint, payload): # endpoint is the path
         return None
     
     return response.json()
+
+
+
+def api_patch(endpoint, payload):
+    try:
+        response = requests.patch(f"{API_URL}{endpoint}", json=payload)
+        
+        if response.status_code == 200:
+            # if it gets here, inside the api.py we already change the target id from booked to paid (andun ung logic sa api.py)
+            return response.json() # if all valid returns the json
+        
+        error_msg = response.json().get("detail", f"HTTP {response.status_code}")        
+        print(f"\n[bold red]❌ {error_msg}[/bold red]")
+    except requests.exceptions.ConnectionError:
+        print("[bold red]Cannot connect to the API.[/bold red]")
+        showCannotConnectAPIServer()    
+        
+    pauseDisplay()
+    return None # returns none of its there is a error
+
+def api_put(endpoint, payload):
+    try:
+        response = requests.put(f"{API_URL}{endpoint}", json=payload)
+        
+        # 200 OK: Return the updated record
+        if response.status_code == 200:
+            return response.json()
+            
+        # If there's an error (e.g. 400 Already Paid, 404 ID Not Found, 422 Invalid Format)
+        error_msg = response.json().get("detail", f"HTTP {response.status_code}")
+        print(f"\n[bold red]❌ {error_msg}[/bold red]")
+        
+    except requests.exceptions.ConnectionError:
+        print("[bold red]Cannot connect to the API.[/bold red]")
+        showCannotConnectAPIServer()
+    pauseDisplay()
+    return None
+
+def api_delete(endpoint):
+    try:
+        response = requests.delete(f"{API_URL}{endpoint}")
+        
+       
+        if response.status_code == 200:
+            return response.json()
+            
+        error_msg = response.json().get("detail", f"HTTP {response.status_code}")
+        print(f"\n[bold red]❌ {error_msg}[/bold red]")
+        
+    except requests.exceptions.ConnectionError:
+        print("[bold red]Cannot connect to the API.[/bold red]")
+        showCannotConnectAPIServer()
+
+    pauseDisplay()
+    return None
+    
 # - - - - - - - - - API functions - - - - - - - - -

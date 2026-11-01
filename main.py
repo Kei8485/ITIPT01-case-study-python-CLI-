@@ -30,19 +30,19 @@ def mainMenu():
 
 # View all studio bookings (GET /studio-rentals)
 def viewStudioRentals():
-    rentals = api_get("/studio-rentals") # uses the function from utils
+    response = api_get("/studio-rentals") # uses the function from utils
     # stores the json list 
     
-    if rentals is None: 
+    if response is None: 
         return # if None that means server error
     
-    if not rentals:
+    if not response:
         print("[yellow]No studio bookings found in the system yet![/yellow]")
         pauseDisplay()
         clear_screen()
         return
     # shows the tables
-    showTable(rentals, "🎸 All Studio Bookings", STUDIO_COLUMNS)
+    showTable(response, "🎸 All Studio Bookings", STUDIO_COLUMNS)
     pauseDisplay()
     clear_screen()
     
@@ -51,13 +51,22 @@ def addStudioBooking():
     
     while True:
         # To check if it can connect to the server
-        api_get("/studio-rentals")
+        get_response = api_get("/studio-rentals")
         
-        showHeadingPanel("➕ ADD NEW STUDIO BOOKING","Enter client & reservation details below")
+        if get_response is None:
+            return
         
-        new_booking = collect_form_inputs(STUDIO_QUESTIONS) # ask the questions and make the user input it
+        
+        showHeadingPanel("➕ ADD NEW STUDIO BOOKING", "000=keep current | 00=back | 0=cancel")
+        
+        new_booking = step_by_step_edit(STUDIO_QUESTIONS) # ask the questions and make the user input it
         if not new_booking:
             return  # cancel and return to menu
+        
+        if not ask_confirm(f"Add new reservation for {new_booking['client_name']} on {new_booking['date']} at {new_booking['start_time']}?"): # ask confirmation
+            clear_screen()
+            print("[cyan]Booking cancelled...[/cyan]\n")
+            return
         
         response = api_post("/studio-rentals",new_booking)
         if response is None:
@@ -75,138 +84,83 @@ def addStudioBooking():
 #Update Status for finished studio booking
 def finishStudioBooking():
     while True:
-        # --- REQUEST 1: GET all bookings & filter only "Booked" ---
-        try:
-            response = requests.get(f"{API_URL}/studio-rentals")
-        except requests.exceptions.ConnectionError:
-            print("[bold red]Cannot connect to the API.[/bold red]")
-            Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
+        response = api_get("/studio-rentals")
+        if response is None:
             return
         
-        if response.status_code != 200:
-            print(f"[bold red]Error: HTTP {response.status_code}[/bold red]")
-            Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
-            return
-        
-        rentals = response.json() # REMEMBER SINCE GET METHOD TO KINUKUHA NYA UNG JSON NA DATA
-        booked_rentals = [r for r in rentals if r["status"] == "Booked"] # may r sa unahan para makuha ung lahat ng data
-        
-        if not booked_rentals:
+        booked_rentals = [r for r in response if r["status"] == "Booked"] # may r sa unahan para makuha ung lahat ng data
+        showHeadingPanel("➕ Unpaid Studio Bookings", "Choose The Clients That Has Paid")
+        if not booked_rentals:# pag alang laman ung booked rentals
             print("[yellow]No unpaid 'Booked' studio reservations found![/yellow]")
-            Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
+            pauseDisplay()
             clear_screen()
             return
-        # if merong laman ung book rentals
-        table = Table(title="🎸 Unpaid Studio Bookings (Status: Booked)", border_style="cyan")
-        table.add_column("ID", style="bold cyan", justify="center")
-        table.add_column("Client Name", style="bold white")
-        table.add_column("Contact")
-        table.add_column("Date Issued", style="dim yellow")
-        table.add_column("Booking Date", style="yellow")
-        table.add_column("Start Time", style="yellow")
-        table.add_column("Hours", justify="center")
-        table.add_column("Total Fee", style="green", justify="right")
-        table.add_column("Status", justify="center")
-        for r in booked_rentals:
-            table.add_row(
-                str(r["id"]),
-                r["client_name"],
-                r["contact_number"],
-                r.get("date_issued", "N/A"),
-                r["date"],
-                r["start_time"],
-                str(r["hours"]),
-                f"₱{r['total_fee']:,.2f}",
-                f"[yellow]{r['status']}[/yellow]"
-            )
-        print(table)
-        print("[red](<Type 0 at any time to cancel and go back>)\n")
         
+        # if merong laman ung booked rentals shows the table
+        showTable(booked_rentals, "🎸 Unpaid Clients Bookings", STUDIO_COLUMNS)
         
-        # Ask which Booking ID to finish (must be in booked_rentals!)
+        # looks only at the ID that has booked status
         valid_ids = [str(r["id"]) for r in booked_rentals]
+        
         while True:
-            rental_id = ask_input("Enter Booking ID to Confirm Payment", r"^[1-9]\d*$", "ID must be a valid number!")
-            if not rental_id: return
-            if rental_id in valid_ids:
-                break
-            print(f"[bold red]❌ Booking ID #{rental_id} is not in the unpaid list above! Choose from: {', '.join(valid_ids)}[/bold red]")
+            while True:
+                chosen_id = ask_input("Choose the ID of the Client to Confirm the Payment", r"^[1-9]\d*$", "ID must be a valid number!")
+                if not chosen_id: return
+                if chosen_id in valid_ids: # compare the chosen id to the valid id (valid id ung mga Booked)
+                    break
+                #prints this if its not in valid ids
+                print(f"[bold red]❌ Booking ID #{chosen_id} is not in the unpaid list above! Choose from: {', '.join(valid_ids)}[/bold red]")
+            
+            # Ask for Payment Method (1 = Cash, 2 = E-Wallet)
+            print("\n[bold yellow]Select Payment Method:[/bold yellow]")
+            print("[bold green][1][/bold green] Cash")
+            print("[bold green][2][/bold green] E-Wallet")
+            
+            pay_choice = ask_input("Enter choice [1-2] (or 00 to go back)", r"^(1|2|00)$", "Please enter 1 for Cash, 2 for E-Wallet, or 00 to go back!")
+            if pay_choice is None: return
+            if pay_choice == "00":
+                print("[yellow]↩️ Going back to choose Booking ID...[/yellow]\n")
+                continue # goes back to choosing Booking ID!
+                
+            payment_method = "Cash" if pay_choice == "1" else "E-Wallet"
+            break
         
-        # Ask for Payment Method (1 = Cash, 2 = E-Wallet)
-        print("\n[bold yellow]Select Payment Method:[/bold yellow]")
-        print("[bold green][1][/bold green] Cash")
-        print("[bold green][2][/bold green] E-Wallet")
-        pay_choice = ask_input("Enter choice [1-2]", r"^[12]$", "Please enter 1 for Cash or 2 for E-Wallet!")
-        if not pay_choice: return
-        payment_method = "Cash" if pay_choice == "1" else "E-Wallet"
+        # Grab chosen booking to display fee & name in confirmation
+        target = next(r for r in booked_rentals if str(r["id"]) == chosen_id) # finds the chosen ID so it can get the client_name
+        # Ask for confirmation before charging
+        if not ask_confirm(f"Confirm payment of ₱{target['total_fee']:,.2f} for {target['client_name']} via {payment_method}?"):
+            clear_screen()
+            print("[cyan]Payment cancelled...[/cyan]\n")
+            return
         
-        try:
-            patch_res = requests.patch(
-                f"{API_URL}/studio-rentals/{rental_id}/pay",
-                json={"payment_method": payment_method}
-            )
-        except requests.exceptions.ConnectionError:
-            print("[bold red]Cannot connect to the API.[/bold red]")
-            return    
+        updatedData = api_patch(f"/studio-rentals/{chosen_id}/pay", {"payment_method": payment_method})
         
-        if patch_res.status_code == 404:
-            print(f"\n[bold red]❌ Booking ID #{rental_id} not found![/bold red]")
-        elif patch_res.status_code == 400:
-            print(f"\n[bold red]❌ Booking ID #{rental_id} is already Paid![/bold red]")
-        elif patch_res.status_code == 200:
-            updated = patch_res.json()
-            print(f"\n[bold green]✅ Payment Confirmed! Booking #{updated['id']} ({updated['client_name']}) is now PAID via {payment_method}![/bold green]")
-            print("[dim green]Transaction record has been automatically created and saved to data.json.\n[/dim green]")
-            paid_table = Table(title="✅ Updated Studio Booking", border_style="green")
-            paid_table.add_column("ID", style="bold cyan", justify="center")
-            paid_table.add_column("Client Name", style="bold white")
-            paid_table.add_column("Contact")
-            paid_table.add_column("Date Issued", style="dim yellow")
-            paid_table.add_column("Booking Date", style="yellow")
-            paid_table.add_column("Start Time", style="yellow")
-            paid_table.add_column("Hours", justify="center")
-            paid_table.add_column("Total Fee", style="green", justify="right")
-            paid_table.add_column("Status", justify="center")
-            paid_table.add_row(
-                str(updated["id"]),
-                updated["client_name"],
-                updated["contact_number"],
-                updated.get("date_issued", "N/A"),
-                updated["date"],
-                updated["start_time"],
-                str(updated["hours"]),
-                f"₱{updated['total_fee']:,.2f}",
-                f"[bold green]{updated['status']}[/bold green]"
-            )
-            print(paid_table)
-        else:
-            print(f"\n[bold red]Error: HTTP {patch_res.status_code}[/bold red]")
-        Prompt.ask("\n[red] - - - Press Enter To Go Back - - - ").strip()
+        if updatedData is None: # if validation are not valid
+            return
+        
+        # prints if this if success
+        print(f"\n[bold green]✅ Payment Confirmed! Booking #{updatedData['id']} ({updatedData['client_name']}) is now PAID via {payment_method}![/bold green]")
+        print("[dim green]Transaction record has been automatically created and saved to data.json.\n[/dim green]")
+            
+        showTable(updatedData, "✅ Updated Studio Booking", STUDIO_COLUMNS)
+            
+        pauseDisplay()
         clear_screen()
+        return
         
 # Updating all details for Put API
 def udpateStudioBooking():
     while True:
-        clear_screen()
         # vvvvvvv SHOWING OF TABLES PALANG vvvvvvv #
-
-        # GET muna dito
-        try:
-            response = requests.get(f"{API_URL}/studio-rentals")
-        except requests.exceptions.ConnectionError:
-            print("[bold red]Cannot connect to the API.[/bold red]")
-            Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
-            return
-        if response.status_code != 200:
-            print(f"[bold red]Error: HTTP {response.status_code}[/bold red]")
-            Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
+        
+        response = api_get("/studio-rentals")
+        
+        if response is None:
             return
         
-        # if all correct get the response
-        rentals = response.json()
         
         #showing booked rentals only and not yet paid
-        booked_rentals = [r for r in rentals if r ["status"] == "Booked"] # lalagay na dito ung data
+        booked_rentals = [r for r in response if r ["status"] == "Booked"] # lalagay na dito ung data
         # MAIN JOB ^^^^^^ for showing the filtered data
         
         # if empty
@@ -218,27 +172,9 @@ def udpateStudioBooking():
         
         ##display if all is valid
         # Display table of editable bookings
-        table = Table(title="📝 Editable Studio Bookings (Status: Booked)", border_style="cyan")
-        table.add_column("ID", style="bold cyan", justify="center")
-        table.add_column("Client Name", style="bold white")
-        table.add_column("Contact")
-        table.add_column("Booking Date", style="yellow")
-        table.add_column("Start Time", style="yellow")
-        table.add_column("Hours", justify="center")
-        table.add_column("Total Fee", style="green", justify="right")
-        for r in booked_rentals:
-            table.add_row(
-                str(r["id"]),
-                r["client_name"],
-                r["contact_number"],
-                r["date"],
-                r["start_time"],
-                str(r["hours"]),
-                f"₱{r['total_fee']:,.2f}"
-            )
-        print(table)
-        print("[red](<Type 0 at any time to cancel and go back>)\n")        
-        # for displaying the input fields
+        showTable(booked_rentals,"📝 Editable Studio Bookings (Status: Booked)", STUDIO_COLUMNS)
+        print("[red](<Type 0 at any time to cancel and go back>)\n")    
+            
         valid_ids = [str(r["id"]) for r in booked_rentals]
         #MAIN JOB ^^^ Since ung isa ay pang display, this ensure validation (gets the valid ids the user can only select)
         #str(r["id"]) - to make sure id lng ang makukuha 
@@ -258,124 +194,85 @@ def udpateStudioBooking():
         selected_booking = next(r for r in booked_rentals if str(r["id"]) == rental_id)
         # Shows the current item that is being edited
         clear_screen()
-        print(Panel.fit(
-            f"[bold cyan]✏️ EDITING BOOKING #{rental_id}[/bold cyan]\n"
-            "[dim]Review current values below. Shortcuts:[/dim]\n"
-            "[bold green][000][/bold green] Retain / Keep current value\n"
-            "[bold yellow][00][/bold yellow]  Go back to previous field\n"
-            "[bold red][0][/bold red]   Cancel and return to menu",
-            border_style="cyan"
-        ))
+        showHeadingPanel(f"✏️ EDITING BOOKING #{rental_id}", "000=keep current | 00=back | 0=cancel")
         
         # Ask the information that will be updated
                 # Print the current details table
-        curr_table = Table(title=f"📋 Current Details for Booking #{rental_id}", border_style="yellow")
-        curr_table.add_column("Field", style="bold white")
-        curr_table.add_column("Current Value", style="bold green")
-
-        curr_table.add_row("Client / Band Name", selected_booking["client_name"])
-        curr_table.add_row("Contact Number", selected_booking["contact_number"])
-        curr_table.add_row("Reservation Date", selected_booking["date"])
-        curr_table.add_row("Start Time", selected_booking["start_time"])
-        curr_table.add_row("Number of Hours", str(selected_booking["hours"]))
-        print(curr_table)
-
-        # 2. Define the fields in order with their validation patterns
-        fields = [
-            {"key": "client_name", "label": "Client / Band Name", "pattern": r"^.+$", "err": "Name cannot be empty!"},
-            {"key": "contact_number", "label": "Contact Number (09XXXXXXXXX)", "pattern": r"^09\d{9}$", "err": "Must be 11 digits starting with 09!"},
-            {"key": "date", "label": "Reservation Date (YYYY-MM-DD)", "pattern": r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$", "err": "Invalid date! Use YYYY-MM-DD!"},
-            {"key": "start_time", "label": "Start Time (HH:MM)", "pattern": r"^([01]\d|2[0-3]):[0-5]\d$", "err": "Use 24-hour HH:MM format (e.g. 14:00)!"},
-            {"key": "hours", "label": "Number of Hours", "pattern": r"^[1-9]\d*$", "err": "Hours must be a whole number greater than 0!"}
-        ]
-
-        # 3. Start with the existing values as default
-        updated_information = {
-            "client_name": selected_booking["client_name"],
-            "contact_number": selected_booking["contact_number"],
-            "date": selected_booking["date"],
-            "start_time": selected_booking["start_time"],
-            "hours": selected_booking["hours"]
-        }
-
-        # 4. Step-by-step navigation loop
-        step = 0 # since naka list ung fields - naka base ung step ung key kung saang input na sya
-        while step < len(fields): # condition if step is greater than the length stops the program
-            current_field = fields[step] # current field na nakalagay kung pang ilan sa (array)
-            field_key = current_field["key"] # since na access na ung id ng array kukunin nya kung anong key un (if client name or contact number etc)
-            current_val = updated_information[field_key] # kung anong information ung inuupdate mo
-
-            print(f"\n[dim cyan]Editing Field [{step + 1}/{len(fields)}]:[/dim cyan] [bold yellow]{current_field['label']}[/bold yellow]")
-            print(f"[dim]Current value:[/dim] [bold green]{current_val}[/bold green]")
-            user_val = Prompt.ask(f"[bold yellow]Enter new value (000=keep, 00=back, 0=cancel)[/bold yellow]").strip()
-
-            # [0] Cancel completely
-            if user_val == "0":
-                clear_screen()
-                print("[cyan]Update cancelled...[/cyan]\n")
-                return
-
-            # [00] Go back to the previous field
-            if user_val == "00":
-                if step > 0:
-                    step -= 1
-                    print("[yellow]↩️ Going back to previous field...[/yellow]")
-                else:
-                    print("[bold red]⚠️ Already at the first field![/bold red]")
-                continue
-
-            # [000] Retain / Keep current value
-            if user_val == "000":
-                print(f"[dim green]Keeping current value: {current_val}[/dim green]")
-                step += 1
-                continue
-
-            # Regular input: Validate using Regex
-            if re.match(current_field["pattern"], user_val):
-                if field_key == "hours":
-                    updated_information[field_key] = int(user_val)
-                else:
-                    updated_information[field_key] = user_val
-                step += 1
-            else:
-                print(f"[bold red]❌ {current_field['err']}[/bold red]")
+        showTable(selected_booking,f"📋 Current Details for Booking #{rental_id}", STUDIO_COLUMNS)
         
-        # doing the PUT API Request
-        try: 
-            put_res = requests.put(f"{API_URL}/studio-rentals/{rental_id}", json=updated_information)
-        except requests.exceptions.ConnectionError:
-            print("[bold red]Cannot connect to the API.[/bold red]")
+        # does the input function for PUT
+        updated_information = step_by_step_edit(STUDIO_QUESTIONS, selected_booking)
+        
+        if updated_information is None:
+            # none lng sya pag nag back ung user [0]
             return
-        if put_res.status_code == 200:
-            ##creates a table showing that its been added
-            updated = put_res.json() # since the json=updated_information is not completed
-                                     # when we put updated_information, it inside the data now so this completes the json with the non inputed datas
-            print(f"\n[bold green]✅ Booking #{rental_id} successfully updated![/bold green]\n")
-            success_table = Table(title="✅ Updated Booking Details", border_style="green")
-            success_table.add_column("ID", style="bold cyan", justify="center")
-            success_table.add_column("Client Name", style="bold white")
-            success_table.add_column("Contact")
-            success_table.add_column("Booking Date", style="yellow")
-            success_table.add_column("Start Time", style="yellow")
-            success_table.add_column("Hours", justify="center")
-            success_table.add_column("Total Fee", style="green", justify="right")
-            success_table.add_row(
-                str(updated["id"]),
-                updated["client_name"],
-                updated["contact_number"],
-                updated["date"],
-                updated["start_time"],
-                str(updated["hours"]),
-                f"₱{updated['total_fee']:,.2f}"
-            )
-            print(success_table)
-    
-        else:
-            print(f"\n[bold red]Error: HTTP {put_res.status_code} - {put_res.text}[/bold red]")
+        
+        # Ask for confirmation before saving changes
+        if not ask_confirm(f"Save updated changes for Booking #{rental_id}?"):
+            clear_screen()
+            print("[cyan]Update cancelled...[/cyan]\n")
+            return
             
-        Prompt.ask("\n[red] - - - Press Enter To Continue - - - ").strip()
+        # doing the PUT API Request
+        response = api_put(f"/studio-rentals/{rental_id}",updated_information)
+        
+        if response is None:
+            return
+        
+        showTable(response, f"✅ Booking #{rental_id} successfully updated!",STUDIO_COLUMNS)
+
+            
+        pauseDisplay()
         return
     
+# Cancel / Delete a Studio Booking (DELETE)
+def deleteStudioBooking():
+    while True:
+        response = api_get("/studio-rentals")
+        if response is None:
+            return
+        
+        # showing booked rentals only (cannot delete already paid bookings)
+        booked_rentals = [r for r in response if r["status"] == "Booked"]
+        showHeadingPanel("🗑️ CANCEL STUDIO BOOKING", "Select a reservation to cancel / delete")
+        
+        if not booked_rentals:
+            print("[yellow]No cancellable 'Booked' studio reservations found![/yellow]")
+            pauseDisplay()
+            clear_screen()
+            return
+            
+        showTable(booked_rentals, "🎸 Cancellable Studio Bookings", STUDIO_COLUMNS)
+        
+        # validate chosen ID
+        valid_ids = [str(r["id"]) for r in booked_rentals]
+        while True:
+            chosen_id = ask_input("Enter Booking ID to Cancel", r"^[1-9]\d*$", "ID must be a valid number!")
+            if not chosen_id: return
+            if chosen_id in valid_ids:
+                break
+            print(f"[bold red]❌ Booking ID #{chosen_id} is not in the list above! Choose from: {', '.join(valid_ids)}[/bold red]")
+            
+        # grab the booking so we can show client name in confirmation
+        selected_booking = next(r for r in booked_rentals if str(r["id"]) == chosen_id)
+        
+        # Ask for confirmation before permanently deleting!
+        if not ask_confirm(f"Are you sure you want to permanently cancel Booking #{chosen_id} for {selected_booking['client_name']}?"):
+            clear_screen()
+            print("[cyan]Deletion cancelled...[/cyan]\n")
+            return
+            
+        # call DELETE API
+        deleted = api_delete(f"/studio-rentals/{chosen_id}")
+        if deleted is None:
+            return
+            
+        print(f"\n[bold green]✅ Booking #{chosen_id} successfully cancelled and deleted![/bold green]\n")
+        showTable(deleted, "🗑️ Deleted Studio Booking", STUDIO_COLUMNS)
+        
+        pauseDisplay()
+        clear_screen()
+        return
    
 #Studio Rental
 def studioRental():
@@ -421,6 +318,7 @@ def studioRental():
                 # delete studio bookings
                 clear_screen()
                 print("[cyan]Deleting studio booking...[/cyan]\n")
+                deleteStudioBooking()
             case "0":
                 print("[yellow]Returning to Main Menu...[/yellow]\n")
                 break
@@ -428,6 +326,126 @@ def studioRental():
                 clear_screen()
                 print("[bold red]Invalid option. Please choose between 0 and 5.[/bold red]\n")
     
+# - - - - - - - - - Transactions & Payment Records Module - - - - - - - - -
+
+# View all transactions (GET /transactions)
+def viewTransactions():
+    transactions = api_get("/transactions") # kumukuha ng lahat ng transactions galing sa API
+    
+    if transactions is None:
+        return # if None that means server error
+        
+    if not transactions: # pag walang laman ung transactions list
+        print("[yellow]No transaction records found in the system yet![/yellow]")
+        pauseDisplay()
+        clear_screen()
+        return
+        
+    # ipapakita ung table gamit ung TRANSACTION_COLUMNS blueprint
+    showTable(transactions, "💵 All Transaction & Payment Records", TRANSACTION_COLUMNS)
+    pauseDisplay()
+    clear_screen()
+
+
+# Update payment method of a transaction (PATCH /transactions/{tx_id})
+def updateTransactionPayment():
+    while True:
+        response = api_get("/transactions")
+        if response is None:
+            return
+            
+        showHeadingPanel("✏️ UPDATE PAYMENT METHOD", "Switch a transaction between Cash and E-Wallet")
+        
+        if not response: # pag alang laman ung transactions
+            print("[yellow]No transaction records found to update![/yellow]")
+            pauseDisplay()
+            clear_screen()
+            return
+            
+        # ipapakita muna lahat ng transactions para makapili ng ID ung user
+        showTable(response, "💵 All Transaction Records", TRANSACTION_COLUMNS)
+        
+        # kukunin lahat ng valid transaction IDs
+        valid_ids = [str(t["id"]) for t in response]
+        
+        while True:
+            while True:
+                chosen_id = ask_input("Enter Transaction ID to Update Payment Method", r"^[1-9]\d*$", "ID must be a valid number!")
+                if not chosen_id: return
+                if chosen_id in valid_ids: # ichecheck kung ung piniling ID ay nasa listahan
+                    break
+                print(f"[bold red]❌ Transaction ID #{chosen_id} is not in the list above! Choose from: {', '.join(valid_ids)}[/bold red]")
+                
+            # hahanapin ung napiling transaction para makita kung ano ung current payment_method nya
+            selected_tx = next(t for t in response if str(t["id"]) == chosen_id)
+            print(f"\n[dim]Selected Transaction #{chosen_id} ({selected_tx['client_name']}) — Current Method:[/dim] [bold magenta]{selected_tx['payment_method']}[/bold magenta]")
+            
+            # Ask for new Payment Method (1 = Cash, 2 = E-Wallet)
+            print("\n[bold yellow]Select New Payment Method:[/bold yellow]")
+            print("[bold green][1][/bold green] Cash")
+            print("[bold green][2][/bold green] E-Wallet")
+            
+            pay_choice = ask_input("Enter choice [1-2] (or 00 to go back)", r"^(1|2|00)$", "Please enter 1 for Cash, 2 for E-Wallet, or 00 to go back!")
+            if pay_choice is None: return
+            if pay_choice == "00":
+                print("[yellow]↩️ Going back to choose Transaction ID...[/yellow]\n")
+                continue # babalik sa pagpili ng Transaction ID
+                
+            payment_method = "Cash" if pay_choice == "1" else "E-Wallet"
+            break
+            
+        # Ask for confirmation before saving
+        if not ask_confirm(f"Change Transaction #{chosen_id} ({selected_tx['client_name']}) payment method from {selected_tx['payment_method']} to {payment_method}?"):
+            clear_screen()
+            print("[cyan]Update cancelled...[/cyan]\n")
+            return
+            
+        # tatawagin ung PATCH API para isave ung bagong payment_method
+        updated_tx = api_patch(f"/transactions/{chosen_id}", {"payment_method": payment_method})
+        if updated_tx is None:
+            return
+            
+        print(f"\n[bold green]✅ Transaction #{chosen_id} payment method updated to {payment_method}![/bold green]\n")
+        showTable(updated_tx, "✅ Updated Transaction Record", TRANSACTION_COLUMNS)
+        
+        pauseDisplay()
+        clear_screen()
+        return
+
+
+# Transactions Menu
+def transactionsModule():
+    clear_screen()
+    while True:
+        print(Panel.fit(
+            "[bold aquamarine1]💵 TRANSACTIONS & PAYMENT RECORDS[/bold aquamarine1]\n"
+            "[dim red]Cash & E-Wallet Payment Logs[/dim red]",
+            border_style="cyan"
+        ))
+
+        print("[bold yellow]Select an Action:[/bold yellow]")
+        print("[bold green][1][/bold green] [dark_red]View All Transactions[/dark_red]")
+        print("[bold green][2][/bold green] [dark_red]Update Payment Method (Cash / E-Wallet)[/dark_red]")
+        print("[bold red][0][/bold red] Back to Main Menu\n")
+
+        choice = Prompt.ask("[dim red]Enter option [0-2][/dim red]").strip()
+        match choice:
+            case "1":
+                clear_screen()
+                print("[cyan]Loading all transactions...[/cyan]\n")
+                viewTransactions()
+            case "2":
+                clear_screen()
+                print("[cyan]Updating transaction payment method...[/cyan]\n")
+                updateTransactionPayment()
+            case "0":
+                print("[yellow]Returning to Main Menu...[/yellow]\n")
+                break
+            case _:
+                clear_screen()
+                print("[bold red]Invalid option. Please choose between 0 and 2.[/bold red]\n")
+
+
 # Main Program
 while True:
     userChoice = mainMenu()
@@ -439,7 +457,7 @@ while True:
         case "3":
             print("[cyan]Finishing booking & confirming payment...[/cyan]\n")
         case "4":
-            print("[cyan]Updating booking details...[/cyan]\n")
+            transactionsModule()
         case "5":
             print("[cyan]Deleting studio booking...[/cyan]\n")
         case "0":

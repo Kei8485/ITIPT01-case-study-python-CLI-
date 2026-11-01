@@ -13,11 +13,31 @@ def load_data():
 def save_data(data):
     with open("data.json", "w") as file:
         json.dump(data, file, indent=2)
+        
+def get_next_id(items):
+    return max([item["id"] for item in items], default=0) + 1
+
+
+def record_transaction(data, category, ref_id, client_name, amount, payment_method):
+    transactions = data["transactions"] # opens the json with the class transactions
+    new_id = get_next_id(transactions)
+
+    new_tx = {
+        "id": new_id,
+        "service_category": category,
+        "reference_id": ref_id,
+        "client_name": client_name,
+        "date": str(date.today()),
+        "payment_method": payment_method,
+        "amount_paid": amount,
+        "status": "Completed"
+    }
+    transactions.append(new_tx)
 
 
 # - - - - - - - - - - - - - - Studio Rental API - - - - - - - - - - - - - -  #         
 
-# --- 1. READ: Get all Studio Bookings (GET) ---
+# --- 1. (GET) ---
 @app.get("/studio-rentals", status_code=200)
 def get_studio_rentals():
     data = load_data()
@@ -26,7 +46,7 @@ def get_studio_rentals():
 
 
 
-# --- 2. CREATE: Add a new Studio Booking (POST) ---
+# --- 2. (POST) ---
 @app.post("/studio-rentals", status_code=201)
 def create_studio_rental(booking: StudioRentalInput): # base on the modeled created
     #the booking is from the new_booking inside the main.py
@@ -37,7 +57,7 @@ def create_studio_rental(booking: StudioRentalInput): # base on the modeled crea
     hourly_rate = data["settings"]["studio_hourly_rate"] # from the data.json and settings and hourly rate data
 
     # Auto-increment ID
-    new_id = max([r["id"] for r in rentals], default=0) + 1
+    new_id = get_next_id(rentals)
     #max gets the latest id then add 1
 
     new_rental = {
@@ -57,12 +77,11 @@ def create_studio_rental(booking: StudioRentalInput): # base on the modeled crea
     return new_rental # sends this as the response for the postman or terminal
 
 
-# --- 3. FINISH & PAY: update the status (PATCH) ---
+# --- 3. (PATCH) ---
 @app.patch("/studio-rentals/{rental_id}/pay", status_code=200)
 def pay_studio_rental(rental_id: int, payment: ConfirmPaymentInput):
     data = load_data()
     rentals = data["studio_rentals"]
-    transactions = data["transactions"]
     
     # for finding the id
     for r in rentals:
@@ -74,24 +93,20 @@ def pay_studio_rental(rental_id: int, payment: ConfirmPaymentInput):
             r["status"] = "Paid"
             
             #for creating the transaction record
-            new_tx_id = max([t["id"] for t in transactions], default=0) + 1
-            new_transaction = {
-                "id": new_tx_id,
-                "service_category": "Studio Rental",
-                "reference_id": r["id"],
-                "client_name": r["client_name"],
-                "date": str(date.today()),
-                "payment_method": payment.payment_method,
-                "amount_paid": r["total_fee"],
-                "status": "Completed"
-            }
-            transactions.append(new_transaction)
+            
+            # data for getting the json file into the function 
+            # Studio Rental is the Category from the json file
+            # gets the id of the current rental
+            # gets the name of the current rental
+            # gets the payment then uses the model.py to get the payment_method
+            record_transaction(data, "Studio Rental", r["id"], r["client_name"], r["total_fee"], payment.payment_method)
+            
             save_data(data)
             return r
     raise HTTPException(status_code=404, detail="Booking ID not found")
 
 
-# --- 4. UPDATE: Modify an existing Studio Booking (PUT) ---
+# --- 4. (PUT) ---
 @app.put("/studio-rentals/{rental_id}", status_code=200)
 def update_studio_rental(rental_id: int, updated_data: StudioRentalInput): # flow: kukunin ung rental id and ung updated data json from main.py
     data = load_data()
@@ -119,4 +134,49 @@ def update_studio_rental(rental_id: int, updated_data: StudioRentalInput): # flo
     raise HTTPException(status_code=404, detail="Booking ID not FOUND") # didisplay sa postman
             
             
-# - - - - - - - - - - - - - - Studio Rental API - - - - - - - - - - - - - -  #         
+# --- 5. (DELETE) ---
+@app.delete("/studio-rentals/{rental_id}", status_code=200)
+def delete_studio_rental(rental_id: int): # rental id ng nilagay ng user
+    data = load_data()
+    rentals = data["studio_rentals"] # rentals naman ung mismong json data
+
+    # looping to find the booking by ID
+    for r in rentals:
+        if r["id"] == rental_id:
+            # Preventing paid transactions from being deleted
+            if r["status"] == "Paid":
+                raise HTTPException(status_code=400, detail="Cannot delete a booking that is already Paid")
+
+            # if hindi paid, remove from the list
+            rentals.remove(r)
+            save_data(data)
+            return r # returns the deleted booking so CLI/Postman can show what was removed
+
+    raise HTTPException(status_code=404, detail="Booking ID not found")
+
+
+
+# - - - - - - - - - - - - - - Transactions API - - - - - - - - - - - - - -  #
+
+# --- 1. (GET) Get all Transactions ---
+@app.get("/transactions", status_code=200)
+def get_transactions():
+    data = load_data()
+    return data["transactions"] # kinukuha ung lahat ng payment records sa data.json
+
+
+# --- 2. (PATCH) Update Payment Method of a Transaction ---
+@app.patch("/transactions/{tx_id}", status_code=200)
+def update_transaction_payment(tx_id: int, payment: ConfirmPaymentInput): # tx_id ung piniling transaction ID, payment ung Cash or E-Wallet
+    data = load_data()
+    transactions = data["transactions"]
+
+    # looping to find the transaction by ID
+    for t in transactions:
+        if t["id"] == tx_id:
+            # pinapalitan ung payment_method (Cash <-> E-Wallet)
+            t["payment_method"] = payment.payment_method
+            save_data(data)
+            return t # ibabalik ung updated transaction para madisplay sa table
+
+    raise HTTPException(status_code=404, detail="Transaction ID not found")

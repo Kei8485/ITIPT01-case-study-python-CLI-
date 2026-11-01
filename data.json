@@ -12,7 +12,7 @@
       "start_time": "05:00",
       "hours": 1,
       "total_fee": 500.0,
-      "status": "Booked"
+      "status": "Paid"
     },
     {
       "id": 2,
@@ -56,7 +56,7 @@
       "start_time": "14:00",
       "hours": 2,
       "total_fee": 1000.0,
-      "status": "Booked"
+      "status": "Paid"
     },
     {
       "id": 6,
@@ -67,18 +67,7 @@
       "start_time": "05:12",
       "hours": 2,
       "total_fee": 1000.0,
-      "status": "Booked"
-    },
-    {
-      "id": 7,
-      "client_name": "Ynand232",
-      "contact_number": "09737749339",
-      "date_issued": "2026-11-01",
-      "date": "2003-02-02",
-      "start_time": "20:14",
-      "hours": 2,
-      "total_fee": 1000.0,
-      "status": "Booked"
+      "status": "Paid"
     },
     {
       "id": 8,
@@ -89,6 +78,17 @@
       "start_time": "23:00",
       "hours": 5,
       "total_fee": 2500.0,
+      "status": "Paid"
+    },
+    {
+      "id": 9,
+      "client_name": "dsadsa",
+      "contact_number": "09656628729",
+      "date_issued": "2026-11-01",
+      "date": "2004-02-02",
+      "start_time": "05:05",
+      "hours": 2,
+      "total_fee": 1000.0,
       "status": "Booked"
     }
   ],
@@ -201,6 +201,56 @@
       "date": "2026-10-30",
       "payment_method": "Cash",
       "amount_paid": 2500.0,
+      "status": "Completed"
+    },
+    {
+      "id": 12,
+      "service_category": "Studio Rental",
+      "reference_id": 1,
+      "client_name": "Juan Dela Cruz",
+      "date": "2026-11-01",
+      "payment_method": "Cash",
+      "amount_paid": 500.0,
+      "status": "Completed"
+    },
+    {
+      "id": 13,
+      "service_category": "Studio Rental",
+      "reference_id": 5,
+      "client_name": "Nigga",
+      "date": "2026-11-01",
+      "payment_method": "Cash",
+      "amount_paid": 1000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 14,
+      "service_category": "Studio Rental",
+      "reference_id": 6,
+      "client_name": "random",
+      "date": "2026-11-01",
+      "payment_method": "Cash",
+      "amount_paid": 1000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 15,
+      "service_category": "Studio Rental",
+      "reference_id": 8,
+      "client_name": "Ynand232",
+      "date": "2026-11-01",
+      "payment_method": "Cash",
+      "amount_paid": 2500.0,
+      "status": "Completed"
+    },
+    {
+      "id": 16,
+      "service_category": "Studio Rental",
+      "reference_id": 1,
+      "client_name": "Juan Dela Cruz",
+      "date": "2026-11-01",
+      "payment_method": "Cash",
+      "amount_paid": 500.0,
       "status": "Completed"
     }
   ]
