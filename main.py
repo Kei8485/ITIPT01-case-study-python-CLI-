@@ -4,7 +4,7 @@ from rich import print
 from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
-from utils import clear_screen, ask_input, api_get, API_URL, api_post, pauseDisplay
+from utils import *
 
 #Main Menu
 def mainMenu():
@@ -41,34 +41,9 @@ def viewStudioRentals():
         pauseDisplay()
         clear_screen()
         return
-    
-    table = Table(title="🎸 All Studio Bookings", border_style="cyan")
-    table.add_column("ID", style="bold cyan", justify="center")
-    table.add_column("Client Name", style="bold white")
-    table.add_column("Contact Number")
-    table.add_column("Date Issued", style="dim yellow")
-    table.add_column("Booking Date", style="yellow")
-    table.add_column("Start Time", style="yellow")
-    table.add_column("Hours", justify="center")
-    table.add_column("Total Fee", style="green", justify="right")
-    table.add_column("Status", justify="center")
-
-    for r in rentals:
-        color = "green" if r["status"] == "Paid" else "yellow"
-        table.add_row( # row base on the column ^^^^^
-            str(r["id"]),
-            r["client_name"],
-            r["contact_number"],
-            r["date_issued"],
-            r["date"],
-            r["start_time"],
-            str(r["hours"]),
-            f"₱{r['total_fee']:,.2f}",
-            f"[{color}]{r['status']}[/{color}]"
-        )
-
-    print(table)
-    Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
+    # shows the tables
+    showTable(rentals, "🎸 All Studio Bookings", STUDIO_COLUMNS)
+    pauseDisplay()
     clear_screen()
     
 # Add new Studio Booking
@@ -78,68 +53,22 @@ def addStudioBooking():
         # To check if it can connect to the server
         api_get("/studio-rentals")
         
-        print(Panel.fit(
-            "[bold cyan]➕ ADD NEW STUDIO BOOKING[/bold cyan]\n"
-            "[dim]Enter client & reservation details below[/dim]\n"
-            "[dim yellow]Press [0] to cancel or go back[/dim yellow]",
-            border_style="cyan"
-        ))
+        showHeadingPanel("➕ ADD NEW STUDIO BOOKING","Enter client & reservation details below")
         
-        client_name = ask_input("Client / Band Name", r"^.+$", "Name cannot be empty!") # does the label component
-        if not client_name: return
-        contact_number = ask_input("Contact Number (09XXXXXXXXX)", r"^09\d{9}$", "Must be 11 digits starting with 09!")
-        if not contact_number: return
-        date = ask_input("Reservation Date (YYYY-MM-DD)",
-        r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$",
-        "Invalid date! Use YYYY-MM-DD with month 01-12 and day 01-31!")
-        if not date: return
-        start_time = ask_input("Start Time (e.g. 14:00)", r"^([01]\d|2[0-3]):[0-5]\d$", "Use 24-hour HH:MM format (e.g. 14:00)!")
-        if not start_time: return
-        hours_input = ask_input("Number of Hours", r"^[1-9]\d*$", "Hours must be a whole number greater than 0!")
-        if not hours_input: return
-        
-        
-        # gets stored here
-        new_booking = {
-            "client_name": client_name,
-            "contact_number": contact_number,
-            "date": date,
-            "start_time": start_time,
-            "hours": hours_input
-        }
+        new_booking = collect_form_inputs(STUDIO_QUESTIONS) # ask the questions and make the user input it
+        if not new_booking:
+            return  # cancel and return to menu
         
         response = api_post("/studio-rentals",new_booking)
-        
         if response is None:
             return    
             
         # if its successful it will proceed here and it will return the r as the json file
         # we show that the data that was sent was a success
-        table = Table(title="✅ New Studio Booking Added", border_style="green")
-        table.add_column("ID", style="bold cyan", justify="center")
-        table.add_column("Client Name", style="bold white")
-        table.add_column("Contact Number")
-        table.add_column("Date Issued", style="dim yellow")
-        table.add_column("Booking Date", style="yellow")
-        table.add_column("Start Time", style="yellow")
-        table.add_column("Hours", justify="center")
-        table.add_column("Total Fee", style="green", justify="right")
-        table.add_column("Status", justify="center")
-        
-        table.add_row(
-            str(response["id"]), # turns into a string because its a int
-            response["client_name"], 
-            response["contact_number"],
-            response["date_issued"],
-            response["date"],
-            response["start_time"],
-            str(response["hours"]),
-            f"₱{response['total_fee']:,.2f}",
-            f"[yellow]{response['status']}[/yellow]"
-        )
-        
-        print(table)
-        Prompt.ask("[red] - - - Press Enter To Go Back - - - ").strip()
+        showTable(response,"✅ New Studio Booking Added", STUDIO_COLUMNS)
+        # pag nilagay ko new_booking hindi sya completo
+        # so need ko ung response para makuha ung legit data na kompleto
+        pauseDisplay()
         clear_screen()
         return
 
