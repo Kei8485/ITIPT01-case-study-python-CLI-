@@ -13,18 +13,29 @@
       "hours": 2,
       "total_fee": 1000.0,
       "status": "Paid"
+    },
+    {
+      "id": 2,
+      "client_name": "Slinky Strings",
+      "contact_number": "09656628720",
+      "date_issued": "2026-11-01",
+      "date": "2026-02-15",
+      "start_time": "02:00",
+      "hours": 1,
+      "total_fee": 500.0,
+      "status": "Paid"
     }
   ],
   "luthiery_services": [
     {
       "id": 1,
-      "client_name": "Carlos Santana",
-      "contact_number": "09171234567",
+      "client_name": "Ynand Andrei",
+      "contact_number": "09656628720",
       "date_issued": "2026-11-01",
-      "instrument_type": "Electric Guitar (PRS)",
-      "issue_description": "Full Setup & Fret Leveling",
-      "estimated_cost": 1500.0,
-      "status": "In Progress"
+      "instrument_type": "Electric Guitar (Yamaha Black Star)",
+      "issue_description": "Pickup and Electronics Modification",
+      "estimated_cost": 1200.0,
+      "status": "Completed"
     }
   ],
   "transactions": [
@@ -36,6 +47,26 @@
       "date": "2026-11-01",
       "payment_method": "E-Wallet",
       "amount_paid": 1000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 2,
+      "service_category": "Studio Rental",
+      "reference_id": 2,
+      "client_name": "Slinky Strings",
+      "date": "2026-11-01",
+      "payment_method": "Cash",
+      "amount_paid": 500.0,
+      "status": "Completed"
+    },
+    {
+      "id": 3,
+      "service_category": "Luthiery Service",
+      "reference_id": 1,
+      "client_name": "Ynand Andrei",
+      "date": "2026-11-01",
+      "payment_method": "Cash",
+      "amount_paid": 1200.0,
       "status": "Completed"
     }
   ]
