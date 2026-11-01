@@ -26,23 +26,79 @@ def mainMenu():
     choice = Prompt.ask("[dim red]Enter option [0-3][/dim red]").strip()
     return choice
 
-# View all studio bookings (GET /studio-rentals)
-def viewStudioRentals():
-    response = api_get("/studio-rentals") # uses the function from utils
+# View studio bookings (with optional status filter & summary)
+def viewStudioRentals(filter_status=None):
+    # tatawag sa API, if may filter_status (Booked/Paid), ipapasa as query parameter ?status=...
+    url = f"/studio-rentals?status={filter_status}" if filter_status else "/studio-rentals"
+    response = api_get(url) # uses the function from utils
     # stores the json list 
     
     if response is None: 
         return # if None that means server error
     
     if not response:
-        print("[yellow]No studio bookings found in the system yet![/yellow]")
+        msg = f"[yellow]No '{filter_status}' studio bookings found![/yellow]" if filter_status else "[yellow]No studio bookings found in the system yet![/yellow]"
+        print(msg)
         pauseDisplay()
         clear_screen()
         return
+
+    title = f"🎸 {filter_status} Studio Bookings" if filter_status else "🎸 All Studio Bookings"
     # shows the tables
-    showTable(response, "🎸 All Studio Bookings", STUDIO_COLUMNS)
+    showTable(response, title, STUDIO_COLUMNS)
+
+    # Kukuwentahin ung summary ng studio bookings
+    total_fee = sum(r["total_fee"] for r in response)
+    booked_total = sum(r["total_fee"] for r in response if r["status"].lower() == "booked")
+    paid_total = sum(r["total_fee"] for r in response if r["status"].lower() == "paid")
+
+    if filter_status:
+        summary_text = f"[bold white]Total {filter_status} Amount:[/bold white] [bold green]₱{total_fee:,.2f}[/bold green] ({len(response)} booking/s)"
+    else:
+        summary_text = (
+            f"[bold yellow]Unpaid (Booked):[/bold yellow] [bold yellow]₱{booked_total:,.2f}[/bold yellow]   |   "
+            f"[bold green]Paid:[/bold green] [bold green]₱{paid_total:,.2f}[/bold green]   |   "
+            f"[bold white]Total:[/bold white] [bold cyan]₱{total_fee:,.2f}[/bold cyan] ({len(response)} booking/s)"
+        )
+
+    print(Panel(summary_text, title="[bold]Studio Bookings Summary[/bold]", border_style="cyan", expand=False))
+
     pauseDisplay()
     clear_screen()
+
+
+# Submenu para makapili kung All, Booked only, or Paid only sa Studio Rentals
+def viewStudioRentalsMenu():
+    while True:
+        clear_screen()
+        print(Panel.fit(
+            "[bold aquamarine1]🔍 VIEW & FILTER STUDIO BOOKINGS[/bold aquamarine1]\n"
+            "[dim]Filter studio reservations by status[/dim]",
+            border_style="cyan"
+        ))
+        print("[bold yellow]Select Filter:[/bold yellow]")
+        print("[bold green][1][/bold green] View All Studio Bookings")
+        print("[bold green][2][/bold green] Booked (Unpaid / Upcoming) Only")
+        print("[bold green][3][/bold green] Paid (Completed) Only")
+        print("[bold red][0][/bold red] Back\n")
+
+        choice = Prompt.ask("[dim red]Enter option [0-3][/dim red]").strip()
+        match choice:
+            case "1":
+                clear_screen()
+                viewStudioRentals()
+            case "2":
+                clear_screen()
+                viewStudioRentals(filter_status="Booked")
+            case "3":
+                clear_screen()
+                viewStudioRentals(filter_status="Paid")
+            case "0":
+                clear_screen()
+                break
+            case _:
+                clear_screen()
+                print("[bold red]Invalid option. Please choose between 0 and 3.[/bold red]\n")
     
 # Add new Studio Booking
 def addStudioBooking():
@@ -283,7 +339,7 @@ def studioRental():
         ))
 
         print("[bold yellow]Select an Action:[/bold yellow]")
-        print("[bold green][1][/bold green] [dark_red]View All Studio Bookings[/dark_red]")
+        print("[bold green][1][/bold green] [dark_red]View & Filter Studio Bookings (All / Booked / Paid)[/dark_red]")
         print("[bold green][2][/bold green] [dark_red]Add New Studio Booking[/dark_red]")
         print("[bold green][3][/bold green] [dark_red]Finish Booking & Confirm Payment[/dark_red]")
         print("[bold green][4][/bold green] [dark_red]Update Booking Details[/dark_red]")
@@ -293,10 +349,8 @@ def studioRental():
         choice = Prompt.ask("[dim red]Enter option [0-5][/dim red]").strip()
         match choice:
             case "1":
-                # show studio bookings
-                clear_screen()
-                print("[cyan]Loading all studio bookings...[/cyan]\n")
-                viewStudioRentals() 
+                # show & filter studio bookings
+                viewStudioRentalsMenu() 
             case "2":
                 # add new studio bookings
                 clear_screen()
@@ -327,23 +381,84 @@ def studioRental():
 
 # - - - - - - - - - Luthiery Services Module - - - - - - - - -
 
-# View all luthiery repair jobs (GET /luthiery)
-def viewLuthieryServices():
-    response = api_get("/luthiery") # kumukuha ng lahat ng repair jobs galing sa API
+# View luthiery repair jobs (with optional status filter & summary)
+def viewLuthieryServices(filter_status=None):
+    # tatawag sa API, if may filter_status (Pending/In Progress/Completed), ipapasa as query parameter ?status=...
+    url = f"/luthiery?status={filter_status}" if filter_status else "/luthiery"
+    response = api_get(url) # kumukuha ng repair jobs galing sa API
     
     if response is None:
         return # if None that means server error
         
     if not response: # pag alang laman ung luthiery_services list
-        print("[yellow]No luthiery repair jobs found in the system yet![/yellow]")
+        msg = f"[yellow]No '{filter_status}' luthiery repair jobs found![/yellow]" if filter_status else "[yellow]No luthiery repair jobs found in the system yet![/yellow]"
+        print(msg)
         pauseDisplay()
         clear_screen()
         return
         
+    title = f"🔧 {filter_status} Luthiery Repair Jobs" if filter_status else "🔧 All Luthiery Repair & Modification Jobs"
     # ipapakita ung table gamit ung LUTHIERY_COLUMNS blueprint
-    showTable(response, "🔧 All Luthiery Repair & Modification Jobs", LUTHIERY_COLUMNS)
+    showTable(response, title, LUTHIERY_COLUMNS)
+
+    # Kukuwentahin ung summary ng luthiery repair jobs
+    total_cost = sum(j["estimated_cost"] for j in response)
+    pending_cost = sum(j["estimated_cost"] for j in response if j["status"].lower() == "pending")
+    inprogress_cost = sum(j["estimated_cost"] for j in response if j["status"].lower() == "in progress")
+    completed_cost = sum(j["estimated_cost"] for j in response if j["status"].lower() == "completed")
+
+    if filter_status:
+        summary_text = f"[bold white]Total {filter_status} Cost:[/bold white] [bold green]₱{total_cost:,.2f}[/bold green] ({len(response)} repair job/s)"
+    else:
+        summary_text = (
+            f"[bold yellow]Pending:[/bold yellow] ₱{pending_cost:,.2f}   |   "
+            f"[bold cyan]In Progress:[/bold cyan] ₱{inprogress_cost:,.2f}   |   "
+            f"[bold green]Completed (Paid):[/bold green] ₱{completed_cost:,.2f}   |   "
+            f"[bold white]Total:[/bold white] [bold yellow]₱{total_cost:,.2f}[/bold yellow] ({len(response)} job/s)"
+        )
+
+    print(Panel(summary_text, title="[bold]Luthiery Repairs Summary[/bold]", border_style="cyan", expand=False))
+
     pauseDisplay()
     clear_screen()
+
+
+# Submenu para makapili kung All, Pending, In Progress, or Completed sa Luthiery Services
+def viewLuthieryMenu():
+    while True:
+        clear_screen()
+        print(Panel.fit(
+            "[bold aquamarine1]🔍 VIEW & FILTER REPAIR JOBS[/bold aquamarine1]\n"
+            "[dim]Filter guitar & instrument repairs by status[/dim]",
+            border_style="cyan"
+        ))
+        print("[bold yellow]Select Filter:[/bold yellow]")
+        print("[bold green][1][/bold green] View All Repair Jobs")
+        print("[bold green][2][/bold green] Pending Repairs Only")
+        print("[bold green][3][/bold green] In Progress Repairs Only")
+        print("[bold green][4][/bold green] Completed (Paid) Repairs Only")
+        print("[bold red][0][/bold red] Back\n")
+
+        choice = Prompt.ask("[dim red]Enter option [0-4][/dim red]").strip()
+        match choice:
+            case "1":
+                clear_screen()
+                viewLuthieryServices()
+            case "2":
+                clear_screen()
+                viewLuthieryServices(filter_status="Pending")
+            case "3":
+                clear_screen()
+                viewLuthieryServices(filter_status="In Progress")
+            case "4":
+                clear_screen()
+                viewLuthieryServices(filter_status="Completed")
+            case "0":
+                clear_screen()
+                break
+            case _:
+                clear_screen()
+                print("[bold red]Invalid option. Please choose between 0 and 4.[/bold red]\n")
 
 
 # Add new Luthiery Repair Job (POST /luthiery)
@@ -406,7 +521,7 @@ def finishLuthieryJob():
                 print(f"[bold red]❌ Repair Job ID #{chosen_id} is not in the ongoing list above! Choose from: {', '.join(valid_ids)}[/bold red]")
                 
             target = next(j for j in active_jobs if str(j["id"]) == chosen_id)
-            print(f"\n[dim]Selected Job #{chosen_id}: {target['client_name']} ({target['instrument_type']}) — Current Status:[/dim] [bold yellow]{target['status']}[/bold yellow]")
+            print(f"\n[blue]Selected Job #{chosen_id}: {target['client_name']} ({target['instrument_type']}) — Current Status: [bold yellow]{target['status']}[/bold yellow]")
             
             # Papipiliin kung gagawing In Progress/Pending o kung tapos na at magbabayad na (Completed)
             toggle_status = "In Progress" if target["status"] == "Pending" else "Pending"
@@ -579,7 +694,7 @@ def luthieryModule():
         ))
 
         print("[bold yellow]Select an Action:[/bold yellow]")
-        print("[bold green][1][/bold green] [dark_red]View All Repair Jobs[/dark_red]")
+        print("[bold green][1][/bold green] [dark_red]View & Filter Repair Jobs (All / Pending / In Progress / Completed)[/dark_red]")
         print("[bold green][2][/bold green] [dark_red]Add New Repair Job[/dark_red]")
         print("[bold green][3][/bold green] [dark_red]Update Repair Status / Confirm Payment[/dark_red]")
         print("[bold green][4][/bold green] [dark_red]Update Repair Job Details[/dark_red]")
@@ -589,9 +704,7 @@ def luthieryModule():
         choice = Prompt.ask("[dim red]Enter option [0-5][/dim red]").strip()
         match choice:
             case "1":
-                clear_screen()
-                print("[cyan]Loading all repair jobs...[/cyan]\n")
-                viewLuthieryServices()
+                viewLuthieryMenu()
             case "2":
                 clear_screen()
                 print("[cyan]Adding new repair job...[/cyan]\n")

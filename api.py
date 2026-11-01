@@ -37,12 +37,18 @@ def record_transaction(data, category, ref_id, client_name, amount, payment_meth
 
 # - - - - - - - - - - - - - - Studio Rental API - - - - - - - - - - - - - -  #         
 
-# --- 1. (GET) ---
+# --- 1. (GET) Get all Studio Bookings (with optional ?status= filter) ---
 @app.get("/studio-rentals", status_code=200)
-def get_studio_rentals():
+def get_studio_rentals(status: str | None = None):
     data = load_data()
-    return data["studio_rentals"] # eto ung ilalagay sa terminal\
+    rentals = data["studio_rentals"] # eto ung ilalagay sa terminal
         # studio_rentals come's from the json data title
+
+    # if may piniling status filter (Booked or Paid), sasalain lang ung nagtutugma
+    if status:
+        return [r for r in rentals if r["status"].lower() == status.lower()]
+
+    return rentals
 
 
 
@@ -158,11 +164,17 @@ def delete_studio_rental(rental_id: int): # rental id ng nilagay ng user
 
 # - - - - - - - - - - - - - - Luthiery Services API - - - - - - - - - - - - - -  #
 
-# --- 1. (GET) Get all Luthiery Repair Jobs ---
+# --- 1. (GET) Get all Luthiery Repair Jobs (with optional ?status= filter) ---
 @app.get("/luthiery", status_code=200)
-def get_luthiery_services():
+def get_luthiery_services(status: str | None = None):
     data = load_data()
-    return data.get("luthiery_services", []) # kinukuha ung lahat ng repair jobs sa data.json
+    repairs = data.get("luthiery_services", []) # kinukuha ung lahat ng repair jobs sa data.json
+
+    # if may piniling status filter (Pending, In Progress, or Completed), sasalain lang ung nagtutugma
+    if status:
+        return [j for j in repairs if j["status"].lower() == status.lower()]
+
+    return repairs
 
 
 # --- 2. (POST) Add New Luthiery Repair Job ---
