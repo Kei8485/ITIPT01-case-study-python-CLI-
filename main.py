@@ -385,6 +385,8 @@ def studioRental():
 def viewLuthieryServices(filter_status=None):
     # tatawag sa API, if may filter_status (Pending/In Progress/Completed), ipapasa as query parameter ?status=...
     url = f"/luthiery?status={filter_status}" if filter_status else "/luthiery"
+    # '?' is a divider and used for filtering 
+    # the one we put for the filter status is the one we will use to compare the filter depending in our logic in the api
     response = api_get(url) # kumukuha ng repair jobs galing sa API
     
     if response is None:
@@ -401,11 +403,11 @@ def viewLuthieryServices(filter_status=None):
     # ipapakita ung table gamit ung LUTHIERY_COLUMNS blueprint
     showTable(response, title, LUTHIERY_COLUMNS)
 
-    # Kukuwentahin ung summary ng luthiery repair jobs
-    total_cost = sum(j["estimated_cost"] for j in response)
-    pending_cost = sum(j["estimated_cost"] for j in response if j["status"].lower() == "pending")
-    inprogress_cost = sum(j["estimated_cost"] for j in response if j["status"].lower() == "in progress")
-    completed_cost = sum(j["estimated_cost"] for j in response if j["status"].lower() == "completed")
+    # kukunin ung summary ng luthiery repair jobs
+    total_cost = sum(r["estimated_cost"] for r in response)
+    pending_cost = sum(r["estimated_cost"] for r in response if r["status"].lower() == "pending")
+    inprogress_cost = sum(r["estimated_cost"] for r in response if r["status"].lower() == "in progress")
+    completed_cost = sum(r["estimated_cost"] for r in response if r["status"].lower() == "completed")
 
     if filter_status:
         summary_text = f"[bold white]Total {filter_status} Cost:[/bold white] [bold green]₱{total_cost:,.2f}[/bold green] ({len(response)} repair job/s)"

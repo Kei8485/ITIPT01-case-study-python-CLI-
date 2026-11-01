@@ -167,13 +167,14 @@ def delete_studio_rental(rental_id: int): # rental id ng nilagay ng user
 # --- 1. (GET) Get all Luthiery Repair Jobs (with optional ?status= filter) ---
 @app.get("/luthiery", status_code=200)
 def get_luthiery_services(status: str | None = None):
-    data = load_data()
+    data = load_data() # the [] creates a empty list for the luthiery services if it still doesnt exist
     repairs = data.get("luthiery_services", []) # kinukuha ung lahat ng repair jobs sa data.json
 
-    # if may piniling status filter (Pending, In Progress, or Completed), sasalain lang ung nagtutugma
+    # if may piniling status filter (Pending, In Progress, or Completed), 
     if status:
-        return [j for j in repairs if j["status"].lower() == status.lower()]
-
+        #gives the filtered data dpending what the status is then compare it to return the filtered data
+        return [r for r in repairs if r["status"].lower() == status.lower()]
+    # gives the unfiltered data
     return repairs
 
 
