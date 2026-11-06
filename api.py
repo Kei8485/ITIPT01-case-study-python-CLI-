@@ -6,11 +6,11 @@ from datetime import date
 
 # 13 API's 
 
-app = FastAPI(title="LA School of Rock - Management API")
+app = FastAPI(title="LA ROCK STUDIO AND LUTHIERY - Management API")
 
 # --- Helper functions to read and save data.json ---
 def load_data():
-    with open("data.json", "r") as file:
+    with open("data.json", "r") as file: 
         return json.load(file)
 
 def save_data(data):
@@ -23,6 +23,8 @@ def get_next_id(items):
 # Created this because 2 references will use this 
 # this only records the transanction. Pushes it to the transactions json file
 def record_transaction(data, category, ref_id, client_name, amount, payment_method):
+    if "transactions" not in data:
+        data["transactions"] = []
     transactions = data["transactions"] # opens the json with the class transactions
     new_id = get_next_id(transactions)
 
@@ -45,7 +47,7 @@ def record_transaction(data, category, ref_id, client_name, amount, payment_meth
 @app.get("/studio-rentals", status_code=200)
 def get_studio_rentals(status: str | None = None):
     data = load_data()
-    rentals = data["studio_rentals"] # eto ung ilalagay sa terminal
+    rentals = data.get("studio_rentals", []) # eto ung ilalagay sa terminal
         # studio_rentals come's from the json data title
 
     # if may piniling status filter (Booked or Paid), sasalain lang ung nagtutugma
@@ -61,10 +63,12 @@ def get_studio_rentals(status: str | None = None):
 def create_studio_rental(booking: StudioRentalInput): # base on the modeled created
     #the booking is from the new_booking inside the main.py
     data = load_data() # load the data from data.json
+    if "studio_rentals" not in data:
+        data["studio_rentals"] = []
     rentals = data["studio_rentals"] #this is where it will get stored
 
     # Get the hourly rate from settings
-    hourly_rate = data["settings"]["studio_hourly_rate"] # from the data.json and settings and hourly rate data
+    hourly_rate = data.get("settings", {}).get("studio_hourly_rate", 500.0) # from the data.json and settings and hourly rate data
 
     # Auto-increment ID
     new_id = get_next_id(rentals)
@@ -91,7 +95,7 @@ def create_studio_rental(booking: StudioRentalInput): # base on the modeled crea
 @app.patch("/studio-rentals/{rental_id}/pay", status_code=200)
 def pay_studio_rental(rental_id: int, payment: ConfirmPaymentInput):
     data = load_data()
-    rentals = data["studio_rentals"]
+    rentals = data.get("studio_rentals", [])
     
     # for finding the id
     for r in rentals:
@@ -120,8 +124,8 @@ def pay_studio_rental(rental_id: int, payment: ConfirmPaymentInput):
 @app.put("/studio-rentals/{rental_id}", status_code=200)
 def update_studio_rental(rental_id: int, updated_data: StudioRentalInput): # flow: kukunin ung rental id and ung updated data json from main.py
     data = load_data()
-    rentals = data["studio_rentals"]
-    hourly_rate = data["settings"]["studio_hourly_rate"]
+    rentals = data.get("studio_rentals", [])
+    hourly_rate = data.get("settings", {}).get("studio_hourly_rate", 500.0)
     
     # looping to check if the data is already paid
     for r in rentals:
@@ -148,7 +152,7 @@ def update_studio_rental(rental_id: int, updated_data: StudioRentalInput): # flo
 @app.delete("/studio-rentals/{rental_id}", status_code=200)
 def delete_studio_rental(rental_id: int): # rental id ng nilagay ng user
     data = load_data()
-    rentals = data["studio_rentals"] # rentals naman ung mismong json data
+    rentals = data.get("studio_rentals", []) # rentals naman ung mismong json data
 
     # looping to find the booking by ID
     for r in rentals:
@@ -171,7 +175,7 @@ def delete_studio_rental(rental_id: int): # rental id ng nilagay ng user
 # --- 1. (GET) Get all Luthiery Repair Jobs (with optional ?status= filter) ---
 @app.get("/luthiery", status_code=200)
 def get_luthiery_services(status: str | None = None):
-    data = load_data() # the [] creates a empty list for the luthiery services if it still doesnt exist
+    data = load_data() #  vvvvv [] creates a empty list for the luthiery services if it still doesnt exist
     repairs = data.get("luthiery_services", []) # kinukuha ung lahat ng repair jobs sa data.json
 
     # if may piniling status filter (Pending, In Progress, or Completed), 
@@ -300,7 +304,7 @@ def delete_luthiery_service(job_id: int):
 @app.get("/transactions", status_code=200)
 def get_transactions(payment_method: str | None = None):
     data = load_data()
-    transactions = data["transactions"] # kinukuha ung lahat ng payment records sa data.json
+    transactions = data.get("transactions", []) # safe measure: defaults to empty list
 
     # if may piniling filter (Cash or E-Wallet), sasalain lang ung nagtutugma
     if payment_method:
@@ -313,7 +317,7 @@ def get_transactions(payment_method: str | None = None):
 @app.patch("/transactions/{tx_id}", status_code=200)
 def update_transaction_payment(tx_id: int, payment: ConfirmPaymentInput): # tx_id ung piniling transaction ID, payment ung Cash or E-Wallet
     data = load_data()
-    transactions = data["transactions"]
+    transactions = data.get("transactions", [])
 
     # looping to find the transaction by ID
     for t in transactions:

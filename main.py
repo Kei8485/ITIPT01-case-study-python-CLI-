@@ -10,18 +10,15 @@ from utils import *
 def mainMenu():
     clear_screen()
     # Header Banner
-    print(Panel.fit(
-        "[bold cyan]🎸 LA SCHOOL OF ROCK[/bold cyan]\n"
-        "[dim red]Cabanatuan City, Nueva Ecija — Internal System[/dim red]",
-        border_style="red"
-    ))
+    showHeadingPanel("🎸 LA ROCK STUDIO AND LUTHIERY", "Cabanatuan City, Nueva Ecija — Internal System", "")
+    
     
     # Menu Options
     print("[bold yellow]Select a Module:[/bold yellow]")
     print("[bold green][1][/bold green] [dark_red]Studio Rentals (Band Rehearsals & Recording)[/dark_red]")
     print("[bold green][2][/bold green] [dark_red]Luthiery Services (Guitar Repairs & Mods)[/dark_red]")
     print("[bold green][3][/bold green] [dark_red]Transactions & Payment Records[/dark_red]")
-    print("[bold red][0][/bold red] Exit System\n")
+    print("[bold red][0][/bold red] [gray]Exit System\n")
     
     choice = Prompt.ask("[dim red]Enter option [0-3][/dim red]").strip()
     return choice
@@ -332,12 +329,8 @@ def deleteStudioBooking():
 def studioRental():
     clear_screen()
     while True:
-        print(Panel.fit(
-            "[bold aquamarine1]🎸 STUDIO RENTALS MODULE[/bold aquamarine1]\n"
-            "[dim red]Band Rehearsals & Recording Reservations[/dim red]",
-            border_style="cyan"
-        ))
-
+        showHeadingPanel("🎸 STUDIO RENTALS MODULE","Band Rehearsals & Recording Reservations","")
+        
         print("[bold yellow]Select an Action:[/bold yellow]")
         print("[bold green][1][/bold green] [dark_red]View & Filter Studio Bookings (All / Booked / Paid)[/dark_red]")
         print("[bold green][2][/bold green] [dark_red]Add New Studio Booking[/dark_red]")
@@ -917,7 +910,7 @@ while True:
         case "3":
             transactionsModule()
         case "0":
-            print("[yellow]Exiting LA School of Rock System... Goodbye![/yellow]\n")
+            print("[yellow]Exiting LA ROCK STUDIO AND LUTHIERY System... Goodbye![/yellow]\n")
             break  
         case _:
             print("[bold red]Invalid option. Please choose between 0 and 3.[/bold red]\n")

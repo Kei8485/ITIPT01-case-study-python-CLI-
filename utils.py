@@ -89,13 +89,10 @@ def showHTTPError(response):
     print(f"[bold red]Error: HTTP {response.status_code}[/bold red]")
     
 # showing heading panel
-def showHeadingPanel(title, description):
-    print(Panel.fit(
-        f"[bold cyan]{title}[/bold cyan]\n"
-        f"[dim]{description}[/dim]\n"
-        "[dim yellow]Press [0] to cancel or go back[/dim yellow]",
-        border_style="cyan"
-    ))
+def showHeadingPanel(title, description, footer="[dim yellow]Press [0] to cancel or go back[/dim yellow]"):
+    content = f"[bold cyan]{title}[/bold cyan]\n[pink]{description}"
+    if footer: content += f"\n{footer}"
+    print(Panel.fit(content,border_style="cyan"))
     
 def ask_confirm(prompt_msg="Are you sure you want to proceed?"):
     """

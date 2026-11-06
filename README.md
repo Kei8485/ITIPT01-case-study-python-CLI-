@@ -84,19 +84,10 @@ pip install fastapi uvicorn
 2. Type `Python: Select Interpreter` and press Enter.
 3. Select `.\venv\Scripts\python.exe` (or the one labeled `'venv': venv`).
 
-### 4. Create Initial API File (`main.py`)
+### 4. Open API Serverr
 
-```python
-from fastapi import FastAPI
-
-app = FastAPI(title="Music Facility Management API")
-
-@app.get("/")
-def root():
-    return {"message": "Music Facility API is running!"}
-
+```
 uvicorn api:app --reload
-to open the api server
 
 ```
 

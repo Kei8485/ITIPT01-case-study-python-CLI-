@@ -24,6 +24,50 @@
       "hours": 1,
       "total_fee": 500.0,
       "status": "Paid"
+    },
+    {
+      "id": 3,
+      "client_name": "Random Band",
+      "contact_number": "09189998888",
+      "date_issued": "2026-11-04",
+      "date": "2026-11-05",
+      "start_time": "16:00",
+      "hours": 3,
+      "total_fee": 1500.0,
+      "status": "Paid"
+    },
+    {
+      "id": 5,
+      "client_name": "Juan Tuwu Tiri",
+      "contact_number": "09652628222",
+      "date_issued": "2026-11-04",
+      "date": "2026-11-05",
+      "start_time": "13:00",
+      "hours": 1,
+      "total_fee": 500.0,
+      "status": "Booked"
+    },
+    {
+      "id": 6,
+      "client_name": "Ynand Andrei",
+      "contact_number": "09656628720",
+      "date_issued": "2026-11-04",
+      "date": "2005-03-03",
+      "start_time": "02:50",
+      "hours": 2,
+      "total_fee": 1000.0,
+      "status": "Booked"
+    },
+    {
+      "id": 7,
+      "client_name": "Test Test",
+      "contact_number": "09346446373",
+      "date_issued": "2026-11-05",
+      "date": "2996-06-25",
+      "start_time": "02:16",
+      "hours": 2,
+      "total_fee": 1000.0,
+      "status": "Paid"
     }
   ],
   "luthiery_services": [
@@ -67,6 +111,26 @@
       "date": "2026-11-01",
       "payment_method": "Cash",
       "amount_paid": 1200.0,
+      "status": "Completed"
+    },
+    {
+      "id": 4,
+      "service_category": "Studio Rental",
+      "reference_id": 3,
+      "client_name": "Random Band",
+      "date": "2026-11-04",
+      "payment_method": "E-Wallet",
+      "amount_paid": 1500.0,
+      "status": "Completed"
+    },
+    {
+      "id": 5,
+      "service_category": "Studio Rental",
+      "reference_id": 7,
+      "client_name": "Test Test",
+      "date": "2026-11-05",
+      "payment_method": "E-Wallet",
+      "amount_paid": 1000.0,
       "status": "Completed"
     }
   ]
