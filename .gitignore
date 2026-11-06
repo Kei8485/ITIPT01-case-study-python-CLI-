@@ -2,3 +2,4 @@ venv/
 __pycache__/
 *.pyc
 tempCodeRunnerFile.py
+CASE_STUDY_DOCUMENTATION.md
