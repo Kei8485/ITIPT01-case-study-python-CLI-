@@ -30,7 +30,7 @@ def viewStudioRentals(filter_status=None):
     response = api_get(url) # uses the function from utils
     # stores the json list 
     
-    if response is None: 
+    if response is None:    
         return # if None that means server error
     
     if not response:
@@ -200,7 +200,7 @@ def finishStudioBooking():
         return
         
 # Updating all details for Put API
-def udpateStudioBooking():
+def updateStudioBooking():
     while True:
         # vvvvvvv SHOWING OF TABLES PALANG vvvvvvv #
         
@@ -358,7 +358,7 @@ def studioRental():
                 # update studio bookings
                 clear_screen()
                 print("[cyan]Updating booking details...[/cyan]\n")
-                udpateStudioBooking()
+                updateStudioBooking()
             case "5":
                 # delete studio bookings
                 clear_screen()

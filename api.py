@@ -18,7 +18,7 @@ def save_data(data):
         json.dump(data, file, indent=2)
         
 def get_next_id(items):
-    return max([item["id"] for item in items], default=0) + 1
+    return max([item["id"] for item in items], default=0) + 1 # loops the json and gets the ID and + 1
 
 # Created this because 2 references will use this 
 # this only records the transanction. Pushes it to the transactions json file
@@ -39,13 +39,15 @@ def record_transaction(data, category, ref_id, client_name, amount, payment_meth
         "status": "Completed"
     }
     transactions.append(new_tx)
+    return new_tx
 
 
 # - - - - - - - - - - - - - - Studio Rental API - - - - - - - - - - - - - -  #         
 
 # --- 1. (GET) Get all Studio Bookings (with optional ?status= filter) ---
 @app.get("/studio-rentals", status_code=200)
-def get_studio_rentals(status: str | None = None):
+def get_studio_rentals(status: str | None = None): # if the parameter here is not in the path, That is the query parameter
+    #if its a data type (int,str,float) it is mostly a query parameter
     data = load_data()
     rentals = data.get("studio_rentals", []) # eto ung ilalagay sa terminal
         # studio_rentals come's from the json data title
@@ -60,16 +62,18 @@ def get_studio_rentals(status: str | None = None):
 
 # --- 2. (POST) ---
 @app.post("/studio-rentals", status_code=201)
-def create_studio_rental(booking: StudioRentalInput): # base on the modeled created
+def create_studio_rental(booking: StudioRentalInput): # if the datatype is a class it follows the body(ex. json body)
+    # ^ path operation function(what the path will do)
     #the booking is from the new_booking inside the main.py
     data = load_data() # load the data from data.json
     if "studio_rentals" not in data:
         data["studio_rentals"] = []
+        
     rentals = data["studio_rentals"] #this is where it will get stored
 
-    # Get the hourly rate from settings
+    # Get the hourly rate from settings #.get is for reading json,dictionary as long as it has it has keys
     hourly_rate = data.get("settings", {}).get("studio_hourly_rate", 500.0) # from the data.json and settings and hourly rate data
-
+                                                # if it has this^, else it will use the 500 
     # Auto-increment ID
     new_id = get_next_id(rentals)
     #max gets the latest id then add 1
@@ -108,15 +112,16 @@ def pay_studio_rental(rental_id: int, payment: ConfirmPaymentInput):
             
             #for creating the transaction record
             
-            # data for getting the json file into the function 
+            # data for getting the json file into t he function 
             # Studio Rental is the Category from the json file
             # gets the id of the current rental
             # gets the name of the current rental
             # gets the payment then uses the model.py to get the payment_method
-            record_transaction(data, "Studio Rental", r["id"], r["client_name"], r["total_fee"], payment.payment_method)
+            newTxRec = record_transaction(data, "Studio Rental", r["id"], r["client_name"], r["total_fee"], payment.payment_method)
             
             save_data(data)
-            return r
+            
+            return newTxRec
     raise HTTPException(status_code=404, detail="Booking ID not found")
 
 

@@ -56,7 +56,7 @@
       "start_time": "02:50",
       "hours": 2,
       "total_fee": 1000.0,
-      "status": "Booked"
+      "status": "Paid"
     },
     {
       "id": 7,
@@ -130,6 +130,46 @@
       "client_name": "Test Test",
       "date": "2026-11-05",
       "payment_method": "E-Wallet",
+      "amount_paid": 1000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 6,
+      "service_category": "Studio Rental",
+      "reference_id": 6,
+      "client_name": "Ynand Andrei",
+      "date": "2026-11-08",
+      "payment_method": "Cash",
+      "amount_paid": 1000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 7,
+      "service_category": "Studio Rental",
+      "reference_id": 6,
+      "client_name": "Ynand Andrei",
+      "date": "2026-11-08",
+      "payment_method": "Cash",
+      "amount_paid": 1000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 8,
+      "service_category": "Studio Rental",
+      "reference_id": 6,
+      "client_name": "Ynand Andrei",
+      "date": "2026-11-08",
+      "payment_method": "Cash",
+      "amount_paid": 1000.0,
+      "status": "Completed"
+    },
+    {
+      "id": 9,
+      "service_category": "Studio Rental",
+      "reference_id": 6,
+      "client_name": "Ynand Andrei",
+      "date": "2026-11-08",
+      "payment_method": "Cash",
       "amount_paid": 1000.0,
       "status": "Completed"
     }

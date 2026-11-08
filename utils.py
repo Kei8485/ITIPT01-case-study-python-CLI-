@@ -267,8 +267,8 @@ def step_by_step_edit(fields, current_data=None): # (kung anong question ilalaga
 
 
 # - - - - - - - - - API functions - - - - - - - - -
-def api_get(endpoint):
-    try:
+def api_get(endpoint): #endpoint is the url path
+    try:    
         response = requests.get(f"{API_URL}{endpoint}") # gets the response so that we know its for rental
         if response.status_code == 200:
             return response.json()
