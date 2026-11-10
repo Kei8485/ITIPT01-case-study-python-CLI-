@@ -122,6 +122,7 @@ def pay_studio_rental(rental_id: int, payment: ConfirmPaymentInput):
             save_data(data)
             
             return newTxRec
+    # if the loop finished without finding the == of rentalID    
     raise HTTPException(status_code=404, detail="Booking ID not found")
 
 
@@ -251,10 +252,10 @@ def pay_luthiery_service(job_id: int, payment: ConfirmPaymentInput):
 
             # gagawing Completed ung status at gagawa ng transaction record
             r["status"] = "Completed"
-            record_transaction(data, "Luthiery Service", r["id"], r["client_name"], r["estimated_cost"], payment.payment_method)
+            recorded_transaction = record_transaction(data, "Luthiery Service", r["id"], r["client_name"], r["estimated_cost"], payment.payment_method)
 
             save_data(data)
-            return r
+            return recorded_transaction
 
     raise HTTPException(status_code=404, detail="Repair Job ID not found")
 

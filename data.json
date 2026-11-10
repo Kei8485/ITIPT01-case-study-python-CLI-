@@ -37,28 +37,6 @@
       "status": "Paid"
     },
     {
-      "id": 5,
-      "client_name": "Juan Tuwu Tiri",
-      "contact_number": "09652628222",
-      "date_issued": "2026-11-04",
-      "date": "2026-11-05",
-      "start_time": "13:00",
-      "hours": 1,
-      "total_fee": 500.0,
-      "status": "Booked"
-    },
-    {
-      "id": 6,
-      "client_name": "Ynand Andrei",
-      "contact_number": "09656628720",
-      "date_issued": "2026-11-04",
-      "date": "2005-03-03",
-      "start_time": "02:50",
-      "hours": 2,
-      "total_fee": 1000.0,
-      "status": "Paid"
-    },
-    {
       "id": 7,
       "client_name": "Test Test",
       "contact_number": "09346446373",
@@ -68,6 +46,28 @@
       "hours": 2,
       "total_fee": 1000.0,
       "status": "Paid"
+    },
+    {
+      "id": 9,
+      "client_name": "Warra Name",
+      "contact_number": "09646623762",
+      "date_issued": "2026-11-10",
+      "date": "2026-25-06",
+      "start_time": "02:06",
+      "hours": 3,
+      "total_fee": 1500.0,
+      "status": "Paid"
+    },
+    {
+      "id": 10,
+      "client_name": "Ynand",
+      "contact_number": "09656628720",
+      "date_issued": "2026-11-10",
+      "date": "2027-02-02",
+      "start_time": "02:02",
+      "hours": 2,
+      "total_fee": 1000.0,
+      "status": "Booked"
     }
   ],
   "luthiery_services": [
@@ -85,92 +85,32 @@
   "transactions": [
     {
       "id": 1,
-      "service_category": "Studio Rental",
+      "service_category": "Luthiery Service",
       "reference_id": 1,
-      "client_name": "Ynand",
-      "date": "2026-11-01",
+      "client_name": "Ynand Andrei",
+      "date": "2026-11-08",
       "payment_method": "E-Wallet",
-      "amount_paid": 1000.0,
+      "amount_paid": 1200.0,
       "status": "Completed"
     },
     {
       "id": 2,
       "service_category": "Studio Rental",
-      "reference_id": 2,
-      "client_name": "Slinky Strings",
-      "date": "2026-11-01",
+      "reference_id": 7,
+      "client_name": "Test Test",
+      "date": "2026-11-08",
       "payment_method": "Cash",
-      "amount_paid": 500.0,
+      "amount_paid": 1000.0,
       "status": "Completed"
     },
     {
       "id": 3,
-      "service_category": "Luthiery Service",
-      "reference_id": 1,
-      "client_name": "Ynand Andrei",
-      "date": "2026-11-01",
-      "payment_method": "Cash",
-      "amount_paid": 1200.0,
-      "status": "Completed"
-    },
-    {
-      "id": 4,
       "service_category": "Studio Rental",
-      "reference_id": 3,
-      "client_name": "Random Band",
-      "date": "2026-11-04",
-      "payment_method": "E-Wallet",
+      "reference_id": 9,
+      "client_name": "Warra Name",
+      "date": "2026-11-10",
+      "payment_method": "Cash",
       "amount_paid": 1500.0,
-      "status": "Completed"
-    },
-    {
-      "id": 5,
-      "service_category": "Studio Rental",
-      "reference_id": 7,
-      "client_name": "Test Test",
-      "date": "2026-11-05",
-      "payment_method": "E-Wallet",
-      "amount_paid": 1000.0,
-      "status": "Completed"
-    },
-    {
-      "id": 6,
-      "service_category": "Studio Rental",
-      "reference_id": 6,
-      "client_name": "Ynand Andrei",
-      "date": "2026-11-08",
-      "payment_method": "Cash",
-      "amount_paid": 1000.0,
-      "status": "Completed"
-    },
-    {
-      "id": 7,
-      "service_category": "Studio Rental",
-      "reference_id": 6,
-      "client_name": "Ynand Andrei",
-      "date": "2026-11-08",
-      "payment_method": "Cash",
-      "amount_paid": 1000.0,
-      "status": "Completed"
-    },
-    {
-      "id": 8,
-      "service_category": "Studio Rental",
-      "reference_id": 6,
-      "client_name": "Ynand Andrei",
-      "date": "2026-11-08",
-      "payment_method": "Cash",
-      "amount_paid": 1000.0,
-      "status": "Completed"
-    },
-    {
-      "id": 9,
-      "service_category": "Studio Rental",
-      "reference_id": 6,
-      "client_name": "Ynand Andrei",
-      "date": "2026-11-08",
-      "payment_method": "Cash",
-      "amount_paid": 1000.0,
       "status": "Completed"
     }
   ]

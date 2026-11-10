@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime, date
 import requests
 from rich import print
 from rich.panel import Panel
@@ -229,11 +230,14 @@ def step_by_step_edit(fields, current_data=None): # (kung anong question ilalaga
             
         user_val = Prompt.ask(f"[bold yellow]Enter value ({shortcuts})[/bold yellow]").strip()
 
-        # [0] Cancel completely
+        # [0] Cancel completely with confirmation
         if user_val == "0":
-            clear_screen()
-            print("[cyan]Update cancelled...[/cyan]\n")
-            return None
+            if ask_confirm("Are you sure you want to cancel?"):
+                clear_screen()
+                cancel_msg = "Update cancelled..." if is_editing else "Operation cancelled..."
+                print(f"[cyan]{cancel_msg}[/cyan]\n")
+                return None
+            continue
 
         # [00] Go back to the previous field
         if user_val == "00":
@@ -252,6 +256,17 @@ def step_by_step_edit(fields, current_data=None): # (kung anong question ilalaga
 
         # Regular input: Validate using Regex
         if re.match(current_field["pattern"], user_val):
+            # Immediate validation for date fields (must be today or future)
+            if field_key == "date":
+                try:
+                    entered_date = datetime.strptime(user_val, "%Y-%m-%d").date()
+                    if entered_date < date.today():
+                        print("[bold red]❌ Reservation date cannot be in the past! Please enter today or a future date.[/bold red]")
+                        continue
+                except ValueError:
+                    print("[bold red]❌ Invalid calendar date! (e.g. check days in month).[/bold red]")
+                    continue
+
             if current_field.get("is_int") or field_key == "hours":
                 updated_info[field_key] = int(user_val)
             elif current_field.get("is_float"):
